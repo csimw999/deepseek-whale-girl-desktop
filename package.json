@@ -1,7 +1,7 @@
 {
   "name": "whale-girl-desktop",
   "productName": "WhaleGirlDesktop",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Windows 桌面的 Live2D 鲸鱼娘桌宠：DSH 联动、本地语音、角色扮演聊天（Electron 宿主）",
   "main": "main.js",
   "private": true,
@@ -9,7 +9,8 @@
     "start": "electron .",
     "probe": "electron . --probe",
     "drag-probe": "electron . --drag-probe",
-    "pack": "node tools/pack-portable.cjs"
+    "pack": "node tools/pack-portable.cjs",
+    "pack:models": "node tools/pack-models.cjs"
   },
   "devDependencies": {
     "electron": "^33.4.11"
