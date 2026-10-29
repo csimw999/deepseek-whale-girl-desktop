@@ -12,11 +12,24 @@ const { spawn } = require('node:child_process')
 const http = require('node:http')
 
 const ROOT = __dirname
+// PACKAGED_PATHS: 打包后 asar 只读，所有可写数据搬到 %APPDATA%\WhaleGirlDesktop
+const IS_PACKAGED = (() => {
+  // 此时 app 还没定义（会 TDZ），所以用 process 上的信息判断
+  try {
+    if (process.defaultApp) return false
+    const res = String(process.resourcesPath || '')
+    return res.length > 0 && res.indexOf('node_modules') === -1
+  } catch { return false }
+})()
+const HOME_DIR = IS_PACKAGED
+  ? path.join(process.env.APPDATA || (app.getPath('appData')), 'WhaleGirlDesktop')
+  : ROOT
+if (IS_PACKAGED) { try { fs.mkdirSync(HOME_DIR, { recursive: true }) } catch {} }
 const PETS_DIR = path.join(ROOT, 'pets')
-const DATA_DIR = path.join(ROOT, 'data')
+const DATA_DIR = path.join(HOME_DIR, 'data')
 const HOST_FILE = path.join(DATA_DIR, 'host-state.json')
 const SHELL_FILE = path.join(DATA_DIR, 'shell.json')
-const SHOT_DIR = path.join(ROOT, 'shots')
+const SHOT_DIR = path.join(HOME_DIR, 'shots')
 const LOG_FILE = path.join(DATA_DIR, 'boot.log')
 
 // ---------- 鏃ュ織锛堝繀椤绘棭浜?electron 寮曞叆锛氬惎鍔ㄥけ璐ユ椂杩欐槸鍞竴绾跨储锛?----------
@@ -134,8 +147,30 @@ function buildPets() {
 }
 
 function overlayBounds() {
-  const area = screen.getPrimaryDisplay().workArea
-  return { x: area.x, y: area.y, width: area.width, height: area.height }
+  // MULTI_MONITOR: 覆盖所有显示器工作区的并集，副屏也能拖过去
+  const displays = screen.getAllDisplays()
+  if (!displays.length) {
+    const area = screen.getPrimaryDisplay().workArea
+    return { x: area.x, y: area.y, width: area.width, height: area.height }
+  }
+  const left = Math.min(...displays.map(item => item.workArea.x))
+  const top = Math.min(...displays.map(item => item.workArea.y))
+  const right = Math.max(...displays.map(item => item.workArea.x + item.workArea.width))
+  const bottom = Math.max(...displays.map(item => item.workArea.y + item.workArea.height))
+  return { x: left, y: top, width: right - left, height: bottom - top }
+}
+
+// MULTI_MONITOR: 插拔显示器 / 改分辨率后重算浮层
+function reapplyOverlayBounds() {
+  try {
+    if (!win || win.isDestroyed()) return
+    const bounds = overlayBounds()
+    win.setBounds(bounds)
+    log('overlay bounds reapplied ' + JSON.stringify(bounds))
+    win.webContents.send('shell:display-changed', bounds)
+  } catch (error) {
+    log('overlay bounds failed: ' + String(error))
+  }
 }
 
 /**
@@ -302,7 +337,7 @@ function petServerStart() {
 
       if (pathname === '/dsh-pet/selftest/shot') {
         const target = String(new URL(req.url, 'http://127.0.0.1').searchParams.get('target') || 'pet')
-        const dir = path.join(__dirname, 'docs', 'shots')
+        const dir = path.join(HOME_DIR, 'shots')
         try { fs.mkdirSync(dir, { recursive: true }) } catch {}
         const pickWindow = target === 'chat' ? chatWin : target === 'settings' ? settingsWin : win
         if (!pickWindow || pickWindow.isDestroyed()) {
@@ -1719,6 +1754,56 @@ function loadForm(form) {
 
 
 
+// AUTO_UPDATE: 打包版启动后查 GitHub Releases，有新版本就提示（不依赖 electron-updater）
+function setupAutoUpdater() {
+  if (!IS_PACKAGED) return
+  const https = require('node:https')
+  const repo = 'csimw999/deepseek-whale-girl-desktop'
+  const current = app.getVersion()
+  const options = {
+    hostname: 'api.github.com',
+    path: '/repos/' + repo + '/releases/latest',
+    headers: { 'User-Agent': 'whale-girl-desktop', Accept: 'application/vnd.github+json' },
+    timeout: 8000,
+  }
+  const request = https.get(options, response => {
+    let body = ''
+    response.on('data', chunk => { body += chunk })
+    response.on('end', () => {
+      try {
+        if (response.statusCode !== 200) return
+        const info = JSON.parse(body)
+        const latest = String(info.tag_name || '').replace(/^v/, '')
+        if (!latest || latest === current) return
+        const compare = latest.split('.').map(Number)
+        const mine = current.split('.').map(Number)
+        let newer = false
+        for (let i = 0; i < 3; i += 1) {
+          if ((compare[i] || 0) > (mine[i] || 0)) { newer = true; break }
+          if ((compare[i] || 0) < (mine[i] || 0)) break
+        }
+        if (!newer) return
+        log('update available: ' + latest + ' (current ' + current + ')')
+        petSay('有新版本 ' + latest + ' 啦，要不要去看看？')
+        const choice = dialog.showMessageBoxSync({
+          type: 'info',
+          buttons: ['打开发布页', '稍后'],
+          defaultId: 0,
+          cancelId: 1,
+          title: '有新版本',
+          message: '鲸鱼娘 ' + latest + ' 已发布（当前 ' + current + '）',
+          detail: '下载新的压缩包解压覆盖即可，聊天记录和设置都在 %APPDATA%\WhaleGirlDesktop，不会被覆盖。',
+        })
+        if (choice === 0) shell.openExternal('https://github.com/' + repo + '/releases/latest')
+      } catch (error) {
+        log('update check parse failed: ' + String(error))
+      }
+    })
+  })
+  request.on('error', error => log('update check failed: ' + String(error)))
+  request.on('timeout', () => { request.destroy() })
+}
+
 function createWindow(options = {}) {
   const sandboxed = SAFE_MODE ? false : options.sandbox !== false
   const bounds = overlayBounds()
@@ -2318,13 +2403,15 @@ try { userDataPath = app.getPath('userData') } catch (error) { log('getPath(user
 log('=== pre-lock ===', 'userData=' + userDataPath)
 // 单实例锁按 userData 路径标识。系统里残留的 electron 进程会占着默认 userData 的锁，
 // 导致每次启动都 hasLock=false 静默退出；换成项目内的 userData 即可绕开。
-try {
-  const localUserData = path.join(DATA_DIR, 'electron-userdata')
-  fs.mkdirSync(localUserData, { recursive: true })
-  app.setPath('userData', localUserData)
-  log('userData switched to', app.getPath('userData'))
-} catch (error) {
-  log('userData switch failed: ' + String(error))
+if (!IS_PACKAGED) {
+  try {
+    const localUserData = path.join(DATA_DIR, 'electron-userdata')
+    fs.mkdirSync(localUserData, { recursive: true })
+    app.setPath('userData', localUserData)
+    log('userData switched to', app.getPath('userData'))
+  } catch (error) {
+    log('userData switch failed: ' + String(error))
+  }
 }
 const hasLock = app.requestSingleInstanceLock()
 log('=== lock ===', 'hasLock=' + hasLock)
@@ -2353,6 +2440,10 @@ if (!hasLock) {
     hostState = { ...DEFAULT_HOST_STATE, ...readJson(HOST_FILE, {}) }
     shellPrefs = { auto: true, ...readJson(SHELL_FILE, {}) }
     createWindow()
+  setupAutoUpdater()
+  ;['display-added', 'display-removed', 'display-metrics-changed'].forEach(name => {
+    screen.on(name, () => setTimeout(reapplyOverlayBounds, 400))
+  })
     // 全局热键兜底：这台机器上托盘图标注册不上，热键是最可靠的退出/隐藏入口
     try {
       const quitOk = globalShortcut.register('Control+Alt+Q', () => { log('hotkey quit'); app.quit() })

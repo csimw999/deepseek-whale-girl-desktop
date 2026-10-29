@@ -31,7 +31,23 @@
 | 任务投递 | 把聊天内容写成 DSH 任务卡（写 `ledger-v2.json`，无需鉴权） |
 | 小工具 | 余额面板、番茄钟、成就、亲密度/投喂 |
 
-## 快速开始
+## 快速开始（二选一）
+
+### A. 下载即用（推荐给普通用户）
+
+去 [Releases](https://github.com/csimw999/deepseek-whale-girl-desktop/releases) 下 `whale-girl-0.2.0-win32-x64.zip`，解压后双击 `启动鲸鱼娘.bat`。
+
+> ⚠️ **解压路径尽量短、别带中文**（例如 `D:\whale-girl`）。
+> 装了 Electron 的 Chromium 在某些机器上遇到超长路径或中文路径会直接闪退（本机实测会崩 `0x80000003`）。
+
+### B. 从源码跑（开发者）
+
+```powershell
+git clone https://github.com/csimw999/deepseek-whale-girl-desktop.git
+cd deepseek-whale-girl-desktop
+npm install
+npm start
+```
 
 ```powershell
 git clone https://github.com/<you>/whale-girl-desktop.git
@@ -73,6 +89,19 @@ npm install
 
 语音合成走 `edge-tts`（联网调用微软接口，免费），不占本地空间。
 
+
+## 更新机制
+
+打包版启动 12 秒后会查一次 GitHub Releases（`api.github.com`，无鉴权）：
+
+- 有新版本 → 她冒泡提示 + 弹窗，点「打开发布页」直接去下载
+- 下载新压缩包解压覆盖即可，**聊天记录/设置/头像都在 `%APPDATA%\WhaleGirlDesktop`，不会被覆盖**
+
+## 多显示器
+
+浮层覆盖**所有显示器工作区的并集**，她可以被拖到副屏；插拔显示器或改分辨率时会自动重算。
+
+- 位置按「距右下角多少像素」记录在 `host-state.json`，换分辨率会尽量贴回原来的角
 ## 目录结构
 
 ```

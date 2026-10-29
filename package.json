@@ -1,19 +1,19 @@
 {
   "name": "whale-girl-desktop",
   "productName": "WhaleGirlDesktop",
-  "version": "0.1.0",
-  "description": "dsh-pet plugin ported to the Windows desktop (Electron host).",
+  "version": "0.2.0",
+  "description": "Windows 桌面的 Live2D 鲸鱼娘桌宠：DSH 联动、本地语音、角色扮演聊天（Electron 宿主）",
   "main": "main.js",
   "private": true,
   "scripts": {
     "start": "electron .",
     "probe": "electron . --probe",
-    "drag-probe": "electron . --drag-probe"
+    "drag-probe": "electron . --drag-probe",
+    "pack": "node tools/pack-portable.cjs"
   },
   "devDependencies": {
     "electron": "^33.4.11"
   },
-  "dependencies": {
-    "sherpa-onnx-node": "^1.13.8"
-  }
+  "author": "csimw999",
+  "license": "MIT"
 }
