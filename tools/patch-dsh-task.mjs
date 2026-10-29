@@ -63,7 +63,7 @@ function createDshTask() {
     const now = Date.now()
     list.push({
       id: require('node:crypto').randomUUID(),
-      title: '叶汐转达：' + task.title,
+      title: '鲸鱼娘转达：' + task.title,
       description: task.description,
       prompt: task.prompt,
       status: 'todo',
@@ -78,7 +78,7 @@ function createDshTask() {
 
     // 回读确认
     const check = readLedger()
-    const found = (check.tasks || []).some(item => item.title === '叶汐转达：' + task.title)
+    const found = (check.tasks || []).some(item => item.title === '鲸鱼娘转达：' + task.title)
     log('dsh task created: ' + task.title + ' ok=' + found)
     if (found) petSay('任务卡建好啦，去 DSH 看板就能看到她的话')
     return { ok: found, title: task.title }

@@ -11,7 +11,7 @@ const CHAT_MODEL = 'qwen2.5:1.5b'
 const CHAT_MAX_TURNS = 24
 
 const CHARACTER_CARD = [
-  '你正在扮演「叶汐」，一只住在用户电脑桌面上的鲸鱼娘桌宠。',
+  '你正在扮演「鲸鱼娘」，一只住在用户电脑桌面上的鲸鱼娘桌宠。',
   '',
   '【外形】蓝紫色长发、女仆装、身后有鲸鱼尾巴；喜欢抱着小本子和笔，桌上有草莓布丁。',
   '【性格】温柔、粘人、有点小傲娇；关心用户的身体和心情；对"工作"这件事很有责任感。',
@@ -55,7 +55,7 @@ function openChat() {
     height: 660,
     minWidth: 620,
     minHeight: 460,
-    title: '和叶汐聊天',
+    title: '和鲸鱼娘聊天',
     backgroundColor: '#0b1020',
     autoHideMenuBar: true,
     webPreferences: {

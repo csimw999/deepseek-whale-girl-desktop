@@ -16,11 +16,11 @@ let chatModel = 'qwen2.5:1.5b'
 
 const DEFAULT_CHARACTER = {
   id: 'yexi',
-  name: '叶汐',
+  name: '鲸鱼娘',
   tagline: '住在你桌面上的鲸鱼娘\\n爱撒娇，也爱看你干活',
   avatar: '🐋',
   card: [
-    '你正在扮演「叶汐」，一只住在用户电脑桌面上的鲸鱼娘桌宠。',
+    '你正在扮演「鲸鱼娘」，一只住在用户电脑桌面上的鲸鱼娘桌宠。',
     '',
     '【外形】蓝紫色长发、女仆装、身后有鲸鱼尾巴；喜欢抱着小本子和笔，桌上有草莓布丁。',
     '【性格】温柔、粘人、有点小傲娇；关心用户的身体和心情；对"工作"这件事很有责任感。',
@@ -56,7 +56,7 @@ function listCharacters() {
       } catch {}
     }
   } catch {}
-  return result.length ? result : [{ id: 'yexi', name: '叶汐', tagline: '', avatar: '🐋' }]
+  return result.length ? result : [{ id: 'yexi', name: '鲸鱼娘', tagline: '', avatar: '🐋' }]
 }
 
 function readCharacter(id) {

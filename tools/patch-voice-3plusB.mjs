@@ -162,7 +162,7 @@ if (!src.includes('function fixAsr')) {
     `// 识别后的热词纠错：模型经常把「鲸鱼娘」听成「金于娘」
 const ASR_FIXES = [
   [/金于娘|金鱼娘|鲸于娘|京鱼娘|近于娘/g, '鲸鱼娘'],
-  [/叶夕|叶希|夜汐|叶西|页西/g, '叶汐'],
+  [/叶夕|叶希|夜汐|叶西|页西/g, '鲸鱼娘'],
   [/D\\s?S\\s?H/g, 'DSH'],
   [/deep\\s?seek/gi, 'DeepSeek'],
 ]

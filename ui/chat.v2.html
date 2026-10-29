@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<title>和叶汐聊天</title>
+<title>和鲸鱼娘聊天</title>
 <style>
   :root {
     color-scheme: dark;
@@ -167,7 +167,7 @@
 <body>
 <aside>
   <div class="avatar" id="avatar" title="点击更换头像">🐋</div>
-  <div class="name" id="charName">叶汐</div>
+  <div class="name" id="charName">鲸鱼娘</div>
   <div class="tagline" id="charTagline">住在你桌面上的鲸鱼娘</div>
   <div class="hr"></div>
   <label class="field"><span>角色</span><select id="charSel"></select></label>
@@ -195,7 +195,7 @@
 <main>
   <header>
     <span class="dot"></span>
-    <span class="title">与 <b id="headName">叶汐</b> 的对话 · 角色扮演</span>
+    <span class="title">与 <b id="headName">鲸鱼娘</b> 的对话 · 角色扮演</span>
     <span class="spacer"></span>
     <span class="chip" id="memChip" title="长期记忆条数">记忆 0</span>
     <span class="chip" id="modelChip">—</span>
@@ -227,7 +227,7 @@
   <div class="card">
     <h3>角色卡</h3>
     <p class="sub">只影响本地聊天，不会改动桌宠本体。</p>
-    <label class="field"><span>名字</span><input id="cfName" placeholder="例如：叶汐" /></label>
+    <label class="field"><span>名字</span><input id="cfName" placeholder="例如：鲸鱼娘" /></label>
     <label class="field"><span>一句话简介</span><input id="cfTagline" placeholder="住在你桌面上的鲸鱼娘" /></label>
     <label class="field"><span>头像（emoji）</span><input id="cfAvatar" placeholder="🐋" maxlength="4" /></label>
     <label class="field"><span>人设（会作为 system 提示）</span><textarea id="cfCard" rows="7" placeholder="你是…"></textarea></label>
@@ -343,7 +343,7 @@
     if (show) {
       if (node) return
       node = document.createElement('div'); node.id = 'typingRow'; node.className = 'typing'
-      node.innerHTML = '叶汐正在想<i></i><i></i><i></i>'
+      node.innerHTML = '鲸鱼娘正在想<i></i><i></i><i></i>'
       logEl.append(node); scroll()
     } else node?.remove()
   }
@@ -431,8 +431,8 @@
 
   function paintCharacter(data) {
     if (!data) return
-    el('charName').textContent = data.name || '叶汐'
-    el('headName').textContent = data.name || '叶汐'
+    el('charName').textContent = data.name || '鲸鱼娘'
+    el('headName').textContent = data.name || '鲸鱼娘'
     el('charTagline').textContent = data.tagline || ''
     currentAvatar = data.avatar || '🐋'
     paintAvatar(el('avatar'), currentAvatar, 'big')

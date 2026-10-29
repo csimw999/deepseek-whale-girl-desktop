@@ -1,11 +1,106 @@
-# 叶汐 · 桌面版（pet-desktop）
+# 鲸鱼娘桌面版 · Whale Girl Desktop
+
+把 [dsh-pet](https://github.com/) 的 Live2D 鲸鱼娘搬到 **Windows 桌面**上：透明置顶、可拖动、会跟着 DeepSeek Harness 干活而做出反应，还能和她聊天、听她说话。
+
+![截图](docs/screenshot.png)
+
+> 默认名字是「鲸鱼娘」，可以在设置或角色卡里改成你喜欢的名字。
+> 非商业项目：代码 MIT，Live2D 美术 CC BY-NC-SA 4.0（见 [CREDITS.md](CREDITS.md)）。
+
+## 它做什么
+
+| 能力 | 说明 |
+| --- | --- |
+| 桌面常驻 | 透明无边框窗口 + alpha 命中测试（点空白处会穿透到下层窗口） |
+| 双形态 | Live2D（12 套动作 / 18 个表情）与像素形态可随时切换 |
+| DSH 联动 | 监听 DSH 会话事件：思考/工具/审查时换表情并冒泡 |
+| 本地语音 | SenseVoice 语音识别 + edge-tts 合成，支持按住说话与常听模式 |
+| 角色扮演聊天 | 独立聊天窗，带历史、记忆、世界书、作者注、重答/编辑/多方案 |
+| 任务投递 | 把聊天内容写成 DSH 任务卡（写 `ledger-v2.json`，无需鉴权） |
+| 小工具 | 余额面板、番茄钟、成就、亲密度/投喂 |
+
+## 快速开始
+
+```powershell
+git clone https://github.com/<you>/whale-girl-desktop.git
+cd whale-girl-desktop
+npm install
+```
+
+然后双击 `启动鲸鱼娘.bat`（会自动拉起 ollama 并设置好 Electron 参数）。
+
+> 如果直接命令行启动，必须带这三个参数，否则窗口不会出现：
+> ```powershell
+> .\node_modules\electron\dist\electron.exe . --no-sandbox --user-data-dir=.\data\userdata
+> ```
+
+### 热键
+
+| 热键 | 功能 |
+| --- | --- |
+| `Ctrl+Shift+C` | 打开/关闭聊天窗 |
+| `Ctrl+Alt+V` | 按住说话 |
+| `Ctrl+Shift+L` | 常听模式（VAD 自动断句） |
+| `Ctrl+Alt+B` | 余额面板 |
+| `Ctrl+Shift+S` | 设置 |
+| `Ctrl+Shift+M` | 切换形态（Live2D / 像素） |
+| `Ctrl+Alt+H` | 显示/隐藏 |
+| `Ctrl+Alt+Q` | 退出 |
+
+## 模型与依赖（**不在仓库里**）
+
+仓库只放代码和美术资源，模型都要自己准备（体积太大且有各自许可）：
+
+| 组件 | 用途 | 获取方式 | 体积 |
+| --- | --- | --- | --- |
+| `qwen2.5:7b` | 聊天主力 | `ollama pull qwen2.5:7b` | 4.7 GB |
+| `qwen2.5:1.5b` | 显存不够时自动降级 | `ollama pull qwen2.5:1.5b` | 1.0 GB |
+| SenseVoice（sherpa-onnx） | 语音识别 | 从 [sherpa-onnx releases](https://github.com/k2-fsa/sherpa-onnx/releases) 下 `sherpa-onnx-sense-voice-zh-en-ja-ko-yue-2024-07-17`，放 `voice-models/` | 1.1 GB |
+| sherpa-onnx CLI | ASR 推理 | 同上 releases 的 `sherpa-onnx-v1.13.8-win-x64-shared-MD-Release`，放 `tools/sherpa/` | 30 MB |
+| ComfyUI（可选） | 本地生图 | 见 `docs/image-gen-plan.md` | 12 GB+ |
+
+语音合成走 `edge-tts`（联网调用微软接口，免费），不占本地空间。
+
+## 目录结构
+
+```
+main.js              Electron 主进程：窗口/托盘/热键/语音/聊天/DSH 联动
+live2d/              Live2D 页面（pet.js 为上游原版 + 2 处补丁）
+  pet.js             上游构建产物，仅加了 __DSHPetHit 与 setFace
+  model/             模型（moc3 2MB + 44 个表情 + 8 套动作）
+app/                 像素形态（插件产物 + 假宿主 host.js）
+ui/                  设置窗 / 聊天窗 / 余额面板
+voice/               语音采集窗（按住说话 / VAD）
+tools/               DSH 事件监听、语音合成脚本、补丁脚本
+assets/              图标、音效
+docs/                设计文档、生图方案
+```
+
+## 已知限制
+
+- 像素形态没有动作/表情，只有静态帧 + 气泡
+- 未读信封/工作简报面板仅 Live2D 形态
+- 像素形态的「说话」走插件原生输入框，不会打开聊天窗
+- ComfyUI 出图尚未接进 UI
+
+## 许可
+
+- **代码**：MIT（见 [LICENSE](LICENSE)）
+- **Live2D 美术**：CC BY-NC-SA 4.0，作者 上善无影 / ZipZipPipe / 水六面（见 [CREDITS.md](CREDITS.md)）
+- **Cubism Core**：Live2D Inc. 专有运行时
+- 本项目**禁止商用**
+
+---
+
+## 开发日志（原始记录，按时间倒序保留）
+### 早期路线：从 WinForms 原生窗口到 Electron
 
 把 **dsh-pet 插件**（`@linxin666/dsh-pet` 0.3.10）的宠物素材搬到 Windows 桌面上运行。
 
 当前实现是 **原生 WinForms 分层窗口 + GDI+**（`native\PetDesktop.exe`，24 KB，纯 .NET 4.8，无 Chromium、无 npm 依赖）。
 
 ```
-双击 启动叶汐.bat   →  右下角出现叶汐（托盘图标可右键）
+双击 启动鲸鱼娘.bat   →  右下角出现鲸鱼娘（托盘图标可右键）
 ```
 
 ---
@@ -73,23 +168,23 @@ size before=222x240  after=222x240
 | --- | --- |
 | `native\PetDesktop.cs` | 全部实现（约 700 行，C# 5）：解析 pet.json、统一缩放渲染、帧循环、光标锚定拖动、托盘、自检 |
 | `native\PetDesktop.exe` | 编译产物（24 KB） |
-| `pets\whale-girl-refined\` | 叶汐素材：`pet.json` + 插件原始 `spritesheet.webp` + 供 GDI+ 用的 `spritesheet.png` |
+| `pets\whale-girl-refined\` | 鲸鱼娘素材：`pet.json` + 插件原始 `spritesheet.webp` + 供 GDI+ 用的 `spritesheet.png` |
 | `pets\whale-girl\` | 原版鲸鱼娘素材（同结构） |
 | `assets\pet.ico` | 托盘图标 |
 | `data\` | 运行状态：`state.json`（位置/尺寸）、`native.log`、自检输出 |
 | `shots\` | 自检导出的逐帧 PNG、桌面实拍截图 |
 | `app\` | **Electron 版源码（已停用，仅供对照）**：插件 `lib/client.js` 原样拷贝 + 加载器/假宿主/浮层 |
-| `启动叶汐.bat` / `自检.bat` / `rebuild.bat` | 启动 / 自检 / 重新编译 |
+| `启动鲸鱼娘.bat` / `自检.bat` / `rebuild.bat` | 启动 / 自检 / 重新编译 |
 
 ## 功能（v2 新增）
 
 | 功能 | 说明 |
 | --- | --- |
-| **点击气泡** | 左键点一下叶汐 → 蓝色胶囊气泡（插件 16 条台词轮转），2.6 秒后消失；仍在冷却时换成"摸过头啦"那一组 |
-| **悬停面板** | 鼠标停在叶汐身上 → 深蓝卡片：名字 / 亲密度等级 / 小鱼干数量 + 「喂食 / 改名 / 隐藏」三个按钮 |
+| **点击气泡** | 左键点一下鲸鱼娘 → 蓝色胶囊气泡（插件 16 条台词轮转），2.6 秒后消失；仍在冷却时换成"摸过头啦"那一组 |
+| **悬停面板** | 鼠标停在鲸鱼娘身上 → 深蓝卡片：名字 / 亲密度等级 / 小鱼干数量 + 「喂食 / 改名 / 隐藏」三个按钮 |
 | **亲密度** | 摸 +1 点（10 秒冷却）、喂 +5 点（30 秒冷却）；等级阶梯与原版一致：幼鲸→伙伴→挚友→深海羁绊→心有灵犀→传说羁绊→神话羁绊→永恒之契→鲸生共渡 |
 | **小鱼干** | 初始 8 条、上限 20；喂一次消耗 1 条；挂机每 5 小时自动 +1 条（`data\pet-state.json` 持久化） |
-| **改名 / 隐藏 / 召唤** | 面板里改名（弹输入框）、隐藏（留一个「召唤叶汐」小胶囊，点一下回来） |
+| **改名 / 隐藏 / 召唤** | 面板里改名（弹输入框）、隐藏（留一个「召唤鲸鱼娘」小胶囊，点一下回来） |
 | **全局热键** | `Ctrl+Alt+Q` 退出；`Ctrl+Alt+H` 显示/隐藏 |
 | **DSH 会话联动** | 启动时自动拉起 `tools\activity-watch.mjs`（需要 DSH 的 node），实时读取 `%APPDATA%\dsh-desktop\harness\sessions\...\session.v4.jsonl.zstd` 的事件，映射成动作：`turn/start`·`step/start`→思考、`tool/call`→跑向右、`assistant/message`·`step/end`→审阅、`turn/end`→跳跃庆祝（完成后 +1 亲密度），25 秒无事件→待机 |
 
@@ -108,8 +203,8 @@ feed -> feed (stocked=7, feeds=1)
 rank=幼鲸 stars=*
 ```
 
-- **拖动**：按住叶汐拖，1:1 跟手；松手落点会记住（`data\state.json`）。
-- **右键叶汐**：弹出菜单 —— 显示/隐藏、大小（120/160/200/260）、**退出叶汐**。
+- **拖动**：按住鲸鱼娘拖，1:1 跟手；松手落点会记住（`data\state.json`）。
+- **右键鲸鱼娘**：弹出菜单 —— 显示/隐藏、大小（120/160/200/260）、**退出鲸鱼娘**。
 - **托盘图标**（任务栏右下角，可能折叠在 `^` 里）：右键同样的菜单；双击＝显示/隐藏。
 - **兜底退出**：任务管理器 → `PetDesktop.exe` → 结束任务（任何情况下都能用）。
 - **点击**：目前只把窗口带到前台，暂无气泡（见"还没做"）。
@@ -159,7 +254,7 @@ rank=幼鲸 stars=*
 `webview2\` 是另一条路线：把 `app\` 里那份 **dsh-pet 插件原版浏览器半区**（`lib/client.js` + React + CSS，一字未改）
 交给 Edge 的 WebView2 渲染，宿主只负责窗口、`petShell` 数据桥和桌面交互。
 
-- 启动：`启动叶汐(插件原件).bat`（需先 `build-webview2.bat` 构建，产物 `webview2\bin\Release\net8.0-windows\YexiWeb.exe`）
+- 启动：`启动鲸鱼娘(插件原件).bat`（需先 `build-webview2.bat` 构建，产物 `webview2\bin\Release\net8.0-windows\YexiWeb.exe`）
 - 桥接：`app\webview2-shell.js` 用 `chrome.webview.postMessage` 实现 `window.petShell`（bootstrap/save/menu/drag/hide），
   `app\host.js`、`app\loader.js`、插件 `client.js` 都不用改
 - 拖动：脚本在捕获阶段拦下指针事件，改通知宿主移动窗口；`click` 仍交给插件（点一下照样摸一摸）
@@ -167,10 +262,10 @@ rank=幼鲸 stars=*
 - 诊断：`data\webview2.log` 会记录初始化、导航结果、渲染进程故障
 
 **已知代价（选 A1 时的取舍）**：WebView2 不能在分层窗口里创建控制器（实测 `0x8000FFFF E_UNEXPECTED`），
-所以这版窗口是**不透明矩形**（深蓝底），没有逐像素鼠标穿透；透明与穿透只有原生版（`启动叶汐.bat`）才有。
+所以这版窗口是**不透明矩形**（深蓝底），没有逐像素鼠标穿透；透明与穿透只有原生版（`启动鲸鱼娘.bat`）才有。
 ## 最终形态：Electron 版（2026-10-22 打通）
 
-**默认入口 `启动叶汐.bat` = Electron 版**：真透明 + 逐像素穿透 + 插件原版 UI（React/CSS/DOM 全是原件）。
+**默认入口 `启动鲸鱼娘.bat` = Electron 版**：真透明 + 逐像素穿透 + 插件原版 UI（React/CSS/DOM 全是原件）。
 
 ### 打通它踩过的三个坑（按出现顺序）
 
@@ -210,7 +305,7 @@ watcher 加了 pid 文件单实例保护（重复拉起会直接退出），避�
 - 修法：从雪碧图裁出 `assets\tray-32.png`、`tray-64.png` 作为托盘图标，`trayIcon()` 按优先级取第一个非空图，
   取不到就跳过托盘并写日志（不再尝试用空图创建）。
 - 结果：`boot.log` 出现 `tray created`，stderr 0 字节（警告消失）。
-- 托盘菜单：显示/隐藏叶汐、大小（120/160/200/260）、形象（精致版/原版）、让她自己动、
+- 托盘菜单：显示/隐藏鲸鱼娘、大小（120/160/200/260）、形象（精致版/原版）、让她自己动、
   **退出**；双击托盘图标 = 显示/隐藏。
 
 **反应（相位 → 动作）**
@@ -231,7 +326,7 @@ watcher 加了 pid 文件单实例保护（重复拉起会直接退出），避�
 **失败判定**：`turn/end.data.reason.kind !== 'completed'`（被中断/报错）→ `failed`，否则 `done`。
 ### 右键宠物出菜单（2026-10-22）
 
-之前 Electron 版只有**托盘**右键菜单，宠物本体没有接右键事件——所以右键叶汐「没反应」是预期的。
+之前 Electron 版只有**托盘**右键菜单，宠物本体没有接右键事件——所以右键鲸鱼娘「没反应」是预期的。
 
 补上后链路：
 
@@ -239,17 +334,17 @@ watcher 加了 pid 文件单实例保护（重复拉起会直接退出），避�
 2. `preload.js` 暴露 `menu()`；
 3. `main.js` 收到 `shell:menu` 后在光标处 `menu.popup({ window: win })`，复用 `buildMenu()`（显示/隐藏、大小、形象、让她自己动、退出）。
 
-实测：`boot.log` 出现 `pet context menu popped`，截图 `shots/el-menu.png` 可见菜单（隐藏叶汐 / 大小 › / 形象 › / 让她自己动 / 退出）。
+实测：`boot.log` 出现 `pet context menu popped`，截图 `shots/el-menu.png` 可见菜单（隐藏鲸鱼娘 / 大小 › / 形象 › / 让她自己动 / 退出）。
 
 注意：整屏浮层默认鼠标穿透，右键能生效的前提是渲染端已判定指针在宠物身上（悬停一下即可，主进程每 120ms 也会兜底推一次光标坐标）。
 ### 改名与两个启动级修复（2026-10-22 第三轮）
 
-**称呼统一为「鲸鱼娘」，她的名字保留「叶汐」**
+**称呼统一为「鲸鱼娘」，她的名字保留「鲸鱼娘」**
 
 - 界面文案（窗口标题、托盘提示、右键/托盘菜单的「显示鲸鱼娘 / 隐藏鲸鱼娘」、菜单里的形象名、启动器文件名）全部改成鲸鱼娘；
-- 面板与改名默认值用 `name: '叶汐'`（`DEFAULT_HOST_STATE.name` 与 `data\host-state.json`），所以悬停面板标题仍是「叶汐」。
+- 面板与改名默认值用 `name: '鲸鱼娘'`（`DEFAULT_HOST_STATE.name` 与 `data\host-state.json`），所以悬停面板标题仍是「鲸鱼娘」。
 
-证据：`shots/renamed-menu.png`（隐藏鲸鱼娘 / 大小 / 形象 / 让她自己动 / 退出）、`shots/renamed-panel.png`（面板标题「叶汐」）。
+证据：`shots/renamed-menu.png`（隐藏鲸鱼娘 / 大小 / 形象 / 让她自己动 / 退出）、`shots/renamed-panel.png`（面板标题「鲸鱼娘」）。
 
 **修复一：`main.js` 编码损坏导致语法错误**
 
@@ -569,7 +664,7 @@ TTS 生成：data\tts\tts-1792751557126.mp3（19.8 KB）→ 页面播放
 
 | 功能 | 实现 | 状态 |
 | --- | --- | --- |
-| **热词纠错** | 识别后做规则替换：金于娘/金鱼娘/鲸于娘/京鱼娘 → 鲸鱼娘；叶夕/叶希/夜汐 → 叶汐；DSH、DeepSeek | ✅ |
+| **热词纠错** | 识别后做规则替换：金于娘/金鱼娘/鲸于娘/京鱼娘 → 鲸鱼娘；叶夕/叶希/夜汐 → 鲸鱼娘；DSH、DeepSeek | ✅ |
 | **打断** | `window.__petStopAudio()`：每次开录、每次新语音前先停掉正在播的音频 | ✅ |
 | **常聆听** | `Ctrl+Shift+L` 开关；页面里做 RMS 门限 VAD（阈值 0.012、静音 700ms 断句、最短 500ms） | ✅ 实测 `always listen -> true` |
 | **B：她 → DSH** | `POST /dsh-pet/say {text}` → 剪贴板 + 找 DSH 窗口 + 粘贴 + 回车 | ⚠️ 见下 |
@@ -654,7 +749,7 @@ win.webContents.on('before-input-event', (e, input) => {   // 禁 Ctrl+−/+/0
 
 ### 界面
 
-- 左侧：角色卡（头像 / 名字 叶汐 / 一句话简介 / 当前模型 / 本轮消息数）
+- 左侧：角色卡（头像 / 名字 鲸鱼娘 / 一句话简介 / 当前模型 / 本轮消息数）
 - 右侧：气泡对话，她的回复**流式打字**
 - 侧栏开关：**朗读她的回复**、**同步到桌宠**、**清空对话**
 
@@ -696,7 +791,7 @@ chat model ready: qwen2.5:7b
 
 ```
 用户：今天改了一天的代码，累死了，你说我该不该休息
-叶汐：嗯，改了一天代码确实挺辛苦的，得给自己的小身体放个假啦～去走走，喝杯温水，感觉会好很多的。
+鲸鱼娘：嗯，改了一天代码确实挺辛苦的，得给自己的小身体放个假啦～去走走，喝杯温水，感觉会好很多的。
 ```
 
 比 1.5B 明显更会接情绪，但**首轮要等模型载入显存**（约十几秒），之后快很多。
@@ -791,7 +886,7 @@ assets/model/motions/*.motion3.json    ← 16 个动作文件
 | --- | --- | --- |
 | 形态 | 她头顶弹一个**单行输入框** | 独立窗口：角色卡 + 气泡列表 |
 | 历史 | 无，发完即走 | 有，落盘 `data\chat-<id>.json` |
-| 谁回复 | 原版把话交给 **DSH 会话**，由 agent 回（花 token、会真的去干活） | **本地 qwen2.5:7b** 扮演叶汐（不花 token、只聊天） |
+| 谁回复 | 原版把话交给 **DSH 会话**，由 agent 回（花 token、会真的去干活） | **本地 qwen2.5:7b** 扮演鲸鱼娘（不花 token、只聊天） |
 | 人设 | DSH 的 agent 人设 | 角色卡 + 长期记忆（每 16 条自动提炼事实） |
 | 展示 | 回复显示在 DSH 界面里 | 流式打字 + 可朗读 + 同步冒泡到桌宠 |
 | 语音 | 无 | 有（edge-tts） |
