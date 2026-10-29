@@ -1,5 +1,9 @@
 # 鲸鱼娘桌面版 · Whale Girl Desktop
 
+![version](https://img.shields.io/badge/version-0.1.0-4c8bf5)
+![platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0a7ea4)
+![license](https://img.shields.io/badge/license-MIT%20%2B%20CC%20BY--NC--SA-orange)
+![harness](https://img.shields.io/badge/DSH-DeepSeek%20Harness-536dfe)
 把 [dsh-pet](https://github.com/) 的 Live2D 鲸鱼娘搬到 **Windows 桌面**上：透明置顶、可拖动、会跟着 DeepSeek Harness 干活而做出反应，还能和她聊天、听她说话。
 
 ![截图](docs/screenshot.png)
