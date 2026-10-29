@@ -284,6 +284,46 @@ function petServerStart() {
         return
       }
 
+      if (pathname === '/dsh-pet/selftest/reload') {
+        const which = String(new URL(req.url, 'http://127.0.0.1').searchParams.get('target') || 'chat')
+        const target = which === 'pet' ? win : which === 'settings' ? settingsWin : chatWin
+        if (target && !target.isDestroyed()) {
+          target.webContents.reload()
+          setTimeout(() => {
+            res.writeHead(200, { 'Content-Type': 'application/json' })
+            res.end(JSON.stringify({ ok: true, target: which }))
+          }, 1200)
+        } else {
+          res.writeHead(200, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ ok: false, target: which }))
+        }
+        return
+      }
+
+      if (pathname === '/dsh-pet/selftest/shot') {
+        const target = String(new URL(req.url, 'http://127.0.0.1').searchParams.get('target') || 'pet')
+        const dir = path.join(__dirname, 'docs', 'shots')
+        try { fs.mkdirSync(dir, { recursive: true }) } catch {}
+        const pickWindow = target === 'chat' ? chatWin : target === 'settings' ? settingsWin : win
+        if (!pickWindow || pickWindow.isDestroyed()) {
+          res.writeHead(200, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ ok: false, error: 'window not available', target }))
+          return
+        }
+        pickWindow.webContents.capturePage().then(image => {
+          const file = path.join(dir, target + '.png')
+          fs.writeFileSync(file, image.toPNG())
+          const { width, height } = image.getSize()
+          log('shot saved: ' + file + ' ' + width + 'x' + height)
+          res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' })
+          res.end(JSON.stringify({ ok: true, file, width, height }))
+        }).catch(error => {
+          res.writeHead(200, { 'Content-Type': 'application/json' })
+          res.end(JSON.stringify({ ok: false, error: String(error) }))
+        })
+        return
+      }
+
       if (pathname === '/dsh-pet/selftest/mail') {
         if (!win || win.isDestroyed()) { res.end('{}'); return }
         win.webContents.executeJavaScript(`(() => {

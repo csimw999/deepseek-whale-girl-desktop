@@ -6,7 +6,15 @@
 ![harness](https://img.shields.io/badge/DSH-DeepSeek%20Harness-536dfe)
 把 [dsh-pet](https://github.com/) 的 Live2D 鲸鱼娘搬到 **Windows 桌面**上：透明置顶、可拖动、会跟着 DeepSeek Harness 干活而做出反应，还能和她聊天、听她说话。
 
-![截图](docs/screenshot.png)
+![展示图](docs/showcase.png)
+
+## 界面
+
+| 桌面常驻 | 角色扮演聊天 | 设置 |
+| --- | --- | --- |
+| ![桌面](docs/screenshots/desktop.png) | ![聊天](docs/screenshots/chat.png) | ![设置](docs/screenshots/settings.png) |
+
+> 截图里她没有名字以外的任何个人信息；默认名字「鲸鱼娘」，可在设置或角色卡里改。
 
 > 默认名字是「鲸鱼娘」，可以在设置或角色卡里改成你喜欢的名字。
 > 非商业项目：代码 MIT，Live2D 美术 CC BY-NC-SA 4.0（见 [CREDITS.md](CREDITS.md)）。
