@@ -40,6 +40,21 @@
 > ⚠️ **解压路径尽量短、别带中文**（例如 `D:\whale-girl`）。
 > 装了 Electron 的 Chromium 在某些机器上遇到超长路径或中文路径会直接闪退（本机实测会崩 `0x80000003`）。
 
+
+### 便携模式（U 盘 / 换机带走记录）
+
+默认数据在 `%APPDATA%\WhaleGirlDesktop`（升级覆盖程序目录不会丢记录）。
+
+如果你想让**整个文件夹自带记录**：在 `鲸鱼娘.exe` 同级新建一个空文件 `portable.txt`（压缩包里已附带 `portable.txt.example`，改名即可）。
+
+```
+whale-girl-0.2.1-win32-x64\
+  ├ 鲸鱼娘.exe
+  ├ portable.txt        ← 建了就启用便携模式
+  └ data\               ← 聊天记录/记忆/头像/设置/日志 全在这里
+```
+
+这时把整个文件夹拷到 U 盘或另一台电脑，记录会跟着走；删掉 `portable.txt` 就回到 APPDATA 模式。
 ### B. 从源码跑（开发者）
 
 ```powershell

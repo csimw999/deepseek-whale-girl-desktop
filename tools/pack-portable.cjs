@@ -37,11 +37,11 @@ const COPY = [
 
 function copyDir(src, dest) {
   fs.mkdirSync(dest, { recursive: true })
-  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
+  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
     if (entry.name.endsWith('.asar')) continue
     const s = path.join(src, entry.name)
     const d = path.join(dest, entry.name)
-    if (entry.name.endsWith('.asar')) continue
+    if (entry.name.endsWith('.asar')) continue
     if (entry.isDirectory()) copyDir(s, d)
     else if (entry.isFile()) fs.copyFileSync(s, d)
   }
@@ -109,8 +109,20 @@ fs.writeFileSync(
 数据目录：%APPDATA%\\WhaleGirlDesktop\\data\r
 热键：Ctrl+Shift+C 聊天 / Ctrl+Alt+V 说话 / Ctrl+Alt+B 余额 / Ctrl+Shift+S 设置\r
 \r
+【便携模式】\r
+把 portable.txt.example 重命名为 portable.txt 放在本目录，\r
+数据（聊天记录/记忆/头像/设置）就会写到本目录的 data\\ 里，\r
+整个文件夹拷到 U 盘或别的电脑，记录会跟着走。\r
+不建这个文件时，数据在 %APPDATA%\\WhaleGirlDesktop（升级不丢）。\r
+\r
 许可：代码 MIT；Live2D 美术 CC BY-NC-SA 4.0（见 CREDITS.md），禁止商用。\r
 `,
+  'utf8',
+)
+
+fs.writeFileSync(
+  path.join(outDir, 'portable.txt.example'),
+  '把这个文件改名为 portable.txt，数据就会保存在本目录的 data\\ 里（便携模式）。\r\n删掉它则使用 %APPDATA%\\WhaleGirlDesktop。\r\n',
   'utf8',
 )
 

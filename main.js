@@ -21,8 +21,17 @@ const IS_PACKAGED = (() => {
     return res.length > 0 && res.indexOf('node_modules') === -1
   } catch { return false }
 })()
+// PORTABLE_MODE: exe 同级放一个 portable.txt，数据就写到 exe 旁边的 data\（U 盘/换机可整体带走）
+const EXE_DIR = (() => {
+  try { return path.dirname(process.execPath) } catch { return ROOT }
+})()
+const PORTABLE_MODE = IS_PACKAGED && (() => {
+  try { return fs.existsSync(path.join(EXE_DIR, 'portable.txt')) } catch { return false }
+})()
 const HOME_DIR = IS_PACKAGED
-  ? path.join(process.env.APPDATA || (app.getPath('appData')), 'WhaleGirlDesktop')
+  ? (PORTABLE_MODE
+      ? EXE_DIR
+      : path.join(process.env.APPDATA || process.env.USERPROFILE || EXE_DIR, 'WhaleGirlDesktop'))
   : ROOT
 if (IS_PACKAGED) { try { fs.mkdirSync(HOME_DIR, { recursive: true }) } catch {} }
 const PETS_DIR = path.join(ROOT, 'pets')

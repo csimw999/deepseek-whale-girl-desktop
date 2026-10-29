@@ -1,7 +1,7 @@
 {
   "name": "whale-girl-desktop",
   "productName": "WhaleGirlDesktop",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Windows 桌面的 Live2D 鲸鱼娘桌宠：DSH 联动、本地语音、角色扮演聊天（Electron 宿主）",
   "main": "main.js",
   "private": true,
