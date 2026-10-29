@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>鲸鱼娘 · 设置</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 16px 18px;
+    font: 13px/1.6 "Microsoft YaHei UI", "Segoe UI", sans-serif;
+    background: #12182a; color: #e6ebf8;
+    -webkit-user-select: none; user-select: none;
+  }
+  h1 { margin: 0 0 4px; font-size: 15px; color: #aec2ff; }
+  .sub { margin: 0 0 14px; font-size: 12px; color: #7f8db3; }
+  .row { display: flex; align-items: center; gap: 8px; margin: 10px 0; }
+  .row > label { width: 62px; color: #9fb0d8; flex: none; }
+  button {
+    border: 1px solid rgba(126,152,255,.35); background: #1c2848; color: #dbe4ff;
+    border-radius: 7px; padding: 5px 10px; cursor: pointer; font: inherit;
+  }
+  button:hover { background: #24325a; }
+  button.on { background: #4a68f5; border-color: #4a68f5; color: #fff; }
+  button.danger { background: #b23a46; border-color: #b23a46; color: #fff; }
+  .hint { margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(126,152,255,.18); font-size: 12px; color: #7f8db3; }
+  .hint b { color: #aec2ff; font-weight: 600; }
+  .foot { display: flex; gap: 8px; margin-top: 16px; }
+  .grow { flex: 1; }
+</style>
+</head>
+<body>
+  <h1>鲸鱼娘 · 桌面版</h1>
+  <p class="sub">名字：<span id="petNameLabel">鲸鱼娘</span> · 当前形态 <span id="formName">—</span></p>
+
+  <div class="row">
+    <label>大小</label>
+    <span id="sizes"></span>
+  </div>
+
+  <div class="row">
+    <label>渲染</label>
+    <span id="forms"></span>
+  </div>
+
+  <div class="row">
+    <label>开机自启</label>
+    <button id="autoStart">检查中…</button>
+  </div>
+
+  <div class="row">
+    <label>亲密度</label>
+    <span id="affinityBox" style="color:#b8c8ff">—</span>
+  </div>
+
+  <div class="row">
+    <label>喂食</label>
+    <button id="feed">喂一条小鱼干</button>
+    <span id="treats" style="color:#7dd3fc">—</span>
+  </div>
+
+  <div class="row">
+    <label>语音</label>
+    <button id="voiceBtn">检查中…</button>
+  </div>
+
+  <div class="row">
+    <label>番茄钟</label>
+    <button id="pomodoroBtn">—</button>
+    <span style="color:#7f8db3;font-size:12px">25 分钟专注 / 5 分钟休息</span>
+  </div>
+
+  <div class="row">
+    <label>解锁动作</label>
+    <span id="unlocks"></span>
+  </div>
+
+  <div class="row">
+    <label>成就</label>
+    <span id="achievements" style="color:#b8c8ff">—</span>
+  </div>
+
+  <div class="row">
+    <label>常聆听</label>
+    <button id="listenBtn">—</button>
+    <span style="color:#7f8db3;font-size:12px">Ctrl+Alt+L</span>
+  </div>
+
+  <div class="row">
+    <label>用量</label>
+    <button id="usage">查看余额 / 今日消费</button>
+  </div>
+
+  <div class="hint">
+    <b>Ctrl+Alt+B</b> 余额面板 · <b>Ctrl+Shift+M</b> 切换形态<br />
+    <b>Ctrl+Alt+Q</b> 退出 · <b>Ctrl+Alt+H</b> 显示/隐藏 · <b>Ctrl+Shift+S</b> 打开本窗口<br />
+    右键鲸鱼娘：大小 / 形象 / 渲染方式 / 退出
+  </div>
+
+  <div class="foot">
+    <button class="danger" id="quit">退出鲸鱼娘</button>
+    <span class="grow"></span>
+    <button id="close">关闭</button>
+  </div>
+
+<script>
+  const api = window.settingsApi
+  const sizes = [120, 160, 200, 260]
+  let state = null
+
+  function render() {
+    document.getElementById('formName').textContent = (state.form || 'live2d') === 'live2d' ? 'Live2D 立绘' : '像素雪碧图'
+    const sizeBox = document.getElementById('sizes')
+    sizeBox.innerHTML = ''
+    for (const size of sizes) {
+      const button = document.createElement('button')
+      button.textContent = size
+      if (state.size === size) button.className = 'on'
+      button.onclick = () => api.setSize(size).then(next => { state = next; render() })
+      sizeBox.append(button)
+    }
+    const formBox = document.getElementById('forms')
+    formBox.innerHTML = ''
+    for (const [value, label] of [['live2d', 'Live2D'], ['pixel', '像素']]) {
+      const button = document.createElement('button')
+      button.textContent = label
+      if ((state.form || 'live2d') === value) button.className = 'on'
+      button.onclick = () => api.setForm(value).then(next => { state = next; render() })
+      formBox.append(button)
+    }
+    const affinity = state.affinity || {}
+    document.getElementById('affinityBox').textContent =
+      (affinity.rank || '—') + ' · ' + (affinity.points || 0) + ' 点' +
+      (affinity.next ? '（下一级 ' + affinity.next + ' @ ' + affinity.nextAt + '）' : '（已满级）')
+    document.getElementById('treats').textContent =
+      '小鱼干 x' + (affinity.stocked ?? 0) + ' / ' + (affinity.cap ?? 0)
+    const voiceBtn = document.getElementById('voiceBtn')
+    voiceBtn.textContent = state.voice === false ? '已关闭' : '已开启'
+    voiceBtn.className = state.voice === false ? '' : 'on'
+    voiceBtn.onclick = () => api.setVoice(state.voice === false).then(next => { state = next; render() })
+    const pomodoroBtn = document.getElementById('pomodoroBtn')
+    pomodoroBtn.textContent = state.pomodoro ? '运行中' : '未开启'
+    pomodoroBtn.className = state.pomodoro ? 'on' : ''
+    pomodoroBtn.onclick = () => api.setPomodoro(!state.pomodoro).then(next => { state = next; render() })
+
+    const unlocks = document.getElementById('unlocks')
+    unlocks.innerHTML = ''
+    for (const item of state.unlocks || []) {
+      const button = document.createElement('button')
+      button.textContent = item.label + (item.unlocked ? '' : '（' + item.at + '点）')
+      button.disabled = !item.unlocked
+      button.style.marginRight = '6px'
+      if (item.unlocked) button.onclick = () => api.playUnlock(item.action)
+      unlocks.append(button)
+    }
+
+    const achievements = Object.values(state.achievements || {})
+    document.getElementById('achievements').textContent =
+      achievements.length ? achievements.map(item => item.label).join(' · ') : '还没解锁（喂食/对话/任务会解锁）'
+
+    const listenBtn = document.getElementById('listenBtn')
+    listenBtn.textContent = state.alwaysListen ? '已开启' : '未开启'
+    listenBtn.className = state.alwaysListen ? 'on' : ''
+    listenBtn.onclick = () => api.toggleListen().then(next => { state = next; render() })
+    const auto = document.getElementById('autoStart')
+    auto.textContent = state.autoStart ? '已开启' : '未开启'
+    auto.className = state.autoStart ? 'on' : ''
+  }
+
+  api.getState().then(next => { state = next; render() })
+  document.getElementById('autoStart').onclick = () => api.setAutoStart(!state.autoStart).then(next => { state = next; render() })
+  document.getElementById('usage').onclick = () => api.showUsage()
+  document.getElementById('feed').onclick = () => api.feed().then(next => {
+    if (next.refused === 'no-treats') { document.getElementById('treats').textContent = '没有小鱼干了'; return }
+    state = next; render()
+  })
+  document.getElementById('quit').onclick = () => api.quit()
+  document.getElementById('close').onclick = () => api.close()
+</script>
+</body>
+</html>

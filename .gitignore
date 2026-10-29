@@ -1,0 +1,42 @@
+# runtime data (sessions, memory, avatars, logs)
+data/
+# local image-gen environment (12 GB)
+comfyui/
+# dependencies
+node_modules/
+# screenshots
+shots/
+# voice models (1.1 GB) and sherpa CLI binaries
+voice-models/
+tools/sherpa/
+# legacy prototypes
+webview2/
+native/
+pets/whale-girl-refined/
+# .NET toolchain leftovers
+.dotnet/
+.appdata/
+# reference image caches
+assets/icon/refs/web/
+# previews
+assets/voice-preview/
+assets/voice-preview2/
+# backups
+*.bak
+*.bak2
+*.bak3
+*.bak4
+*.bak5
+*.bak6
+*.bak7
+*.bak8
+*.bak9
+*.bak10
+*.bak11
+*.bak12
+*.bak13
+*.bak14
+*.bak15
+# OS
+Thumbs.db
+desktop.ini

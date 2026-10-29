@@ -1,0 +1,19 @@
+{
+  "name": "whale-girl-desktop",
+  "productName": "WhaleGirlDesktop",
+  "version": "0.1.0",
+  "description": "dsh-pet plugin ported to the Windows desktop (Electron host).",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "probe": "electron . --probe",
+    "drag-probe": "electron . --drag-probe"
+  },
+  "devDependencies": {
+    "electron": "^33.4.11"
+  },
+  "dependencies": {
+    "sherpa-onnx-node": "^1.13.8"
+  }
+}

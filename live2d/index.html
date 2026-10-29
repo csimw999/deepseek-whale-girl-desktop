@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>鲸鱼娘 · Live2D 预览</title>
+<style>
+  html, body { margin: 0; padding: 0; background: transparent; overflow: hidden; }
+  #stage { width: 100vw; height: 100vh; display: block; }
+  #hud {
+    position: fixed; left: 8px; bottom: 8px; display: flex; gap: 6px;
+    font: 12px/1.4 "Microsoft YaHei UI", sans-serif; opacity: 0.25; transition: opacity 0.2s;
+  }
+  #hud:hover { opacity: 1; }
+  #hud button {
+    border: 1px solid rgba(126,152,255,.45); background: rgba(19,28,54,.85); color: #cfe0ff;
+    border-radius: 6px; padding: 4px 8px; cursor: pointer;
+  }
+  #err {
+    position: fixed; inset: 12px; color: #ffb4b4; font: 12px/1.5 monospace;
+    white-space: pre-wrap; display: none;
+  }
+</style>
+</head>
+<body>
+<canvas id="stage"></canvas>
+<div id="hud">
+  <button data-motion="idle">待机</button>
+  <button data-motion="splash">喷水</button>
+  <button data-motion="bubble">吹泡泡</button>
+  <button data-motion="selfie">自拍</button>
+  <button id="close">关闭</button>
+</div>
+<div id="err"></div>
+
+<script src="./vendor/pixi.min.js"></script>
+<script src="./vendor/live2dcubismcore.min.js"></script>
+<script src="./vendor/cubism4.min.js"></script>
+<script>
+'use strict'
+
+// Live2D 预览：验证 Cubism 模型能否在我们的 Electron 壳里正常渲染（透明、缩放、动作、表情）。
+// 模型与运行时来自 github.com/Andersen216/dsh-whale-girl-live2d
+// 代码 MIT；模型美术 CC BY-NC-SA 4.0（非商业，署名：上善无影 / ZipZipPipe / 水六面）。
+
+const MODEL_URL = './model/c_0120.model3.json'
+const status = { ready: false, error: null, model: null }
+
+window.petLive2DStatus = status
+
+function fail(message) {
+  status.error = String(message)
+  const box = document.getElementById('err')
+  box.style.display = 'block'
+  box.textContent = 'Live2D 加载失败：\n' + message
+  console.error('[live2d]', message)
+}
+
+window.addEventListener('error', event => fail(event.message))
+
+async function main() {
+  if (!window.PIXI || !PIXI.live2d) return fail('PIXI 或 pixi-live2d-display 没有加载成功')
+  status.pixi = PIXI.VERSION
+
+  const app = new PIXI.Application({
+    view: document.getElementById('stage'),
+    backgroundAlpha: 0,
+    antialias: true,
+    autoDensity: true,
+    resolution: window.devicePixelRatio || 1,
+    resizeTo: window,
+  })
+  status.app = true
+
+  const model = await PIXI.live2d.Live2DModel.from(MODEL_URL + '?v=' + Date.now())
+  status.model = model
+  app.stage.addChild(model)
+
+  // 让人物铺满窗口、脚底贴底。
+  // 注意：Cubism 模型的 internalModel.originalWidth/Height 是归一化单位（约 2），
+  // 要缩放必须用 model.width / model.height（像素），否则会放大成"只剩一张脸"。
+  function fit() {
+    model.scale.set(1)
+    const im = model.internalModel
+    console.log('[live2d] dims model=' + model.width + 'x' + model.height +
+      ' internal=' + im.width + 'x' + im.height +
+      ' original=' + im.originalWidth + 'x' + im.originalHeight +
+      ' renderer=' + app.renderer.width + 'x' + app.renderer.height +
+      ' screen=' + app.screen.width + 'x' + app.screen.height)
+    const naturalWidth = model.width
+    const naturalHeight = model.height
+    const scale = Math.min(app.renderer.width / naturalWidth, app.renderer.height / naturalHeight) * 0.98
+    model.scale.set(scale)
+    model.x = (app.renderer.width - naturalWidth * scale) / 2
+    model.y = app.renderer.height - naturalHeight * scale
+    status.size = { naturalWidth, naturalHeight, scale }
+    console.log('[live2d] fitted scale=' + scale.toFixed(4) + ' size=' + model.width + 'x' + model.height +
+      ' pos=' + model.x.toFixed(1) + ',' + model.y.toFixed(1))
+  }
+  fit()
+  window.addEventListener('resize', () => setTimeout(fit, 50))
+
+  // 待机动作循环（放完自动接下一段）
+  model.internalModel.motionManager.on('motionFinish', () => play('idle'))
+  setTimeout(() => play('idle'), 300)
+
+  const manager = model.internalModel.motionManager
+  const definitions = manager.definitions || {}
+  status.motions = Object.keys(definitions)
+  const settings = model.internalModel.settings || {}
+  status.expressionKeys = Object.keys(settings)
+  const rawJson = settings.json || {}
+  status.rawExpressionKeys = Object.keys(rawJson.Expressions ? { Expressions: 1 } : {})
+  const expressionSource = settings.expressions || rawJson.Expressions || []
+  status.expressions = Array.isArray(expressionSource)
+    ? expressionSource.map(item => item.Name || item.name).filter(Boolean)
+    : Object.keys(expressionSource)
+  console.log('[live2d] settings keys=' + status.expressionKeys.join(',') + ' rawHasExpressions=' + !!rawJson.Expressions + ' count=' + status.expressions.length)
+  status.ready = true
+  console.log('[live2d] ready motions=' + status.motions.join(',') + ' expressions=' + status.expressions.length)
+}
+
+function play(name) {
+  const model = status.model
+  if (!model) return
+  const manager = model.internalModel.motionManager
+  const definitions = manager.definitions || {}
+  if (!definitions[name] || !definitions[name].length) return
+  manager.startRandomMotion(name, 3)
+  status.lastMotion = name
+}
+
+function expression(index) {
+  const model = status.model
+  if (!model) return
+  const settings = model.internalModel.settings || {}
+  const raw = settings.json || {}
+  const source = settings.expressions || raw.Expressions || []
+  const names = Array.isArray(source) ? source.map(item => item.Name || item.name).filter(Boolean) : Object.keys(source)
+  if (!names.length) return
+  model.expression(names[index % names.length])
+  status.lastExpression = names[index % names.length]
+}
+
+document.querySelectorAll('#hud button[data-motion]').forEach(button => {
+  button.addEventListener('click', () => play(button.dataset.motion))
+})
+document.getElementById('close').addEventListener('click', () => {
+  if (window.petShell && typeof window.petShell.menu === 'function') window.petShell.menu()
+})
+
+main().catch(error => fail(error && error.message ? error.message : String(error)))
+</script>
+</body>
+</html>

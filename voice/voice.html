@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>voice</title>
+<style>html,body{margin:0;background:#0b1020;color:#9fb0d8;font:12px sans-serif}#s{padding:8px}</style>
+</head>
+<body>
+<div id="s">麦克风空闲</div>
+<script>
+  // 隐藏窗口：只做「录音 → 16k 单声道 PCM」这一件事，把数据丢给主进程。
+  // 主进程负责存 wav、调 sherpa-onnx 识别、问 ollama、再调 edge-tts 说话。
+  const status = document.getElementById('s')
+  let recording = false
+  let alwaysMode = false
+  let speechStartedAt = 0
+  let silenceSince = 0
+  let utterance = []
+  let ctx = null
+  let stream = null
+  let node = null
+  let chunks = []
+  let sampleRate = 48000
+
+  function setStatus(text) { status.textContent = text }
+
+  async function begin() {
+    if (recording) return
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } })
+    } catch (error) {
+      setStatus('麦克风不可用: ' + error.message)
+      window.voiceBridge && window.voiceBridge.failed(String(error.message || error))
+      return
+    }
+    ctx = new AudioContext()
+    sampleRate = ctx.sampleRate
+    const source = ctx.createMediaStreamSource(stream)
+    node = ctx.createScriptProcessor(4096, 1, 1)
+    chunks = []
+    const VAD_THRESHOLD = 0.012      // 说话音量门限
+    const SILENCE_MS = 700          // 静音多久算说完
+    const MIN_SPEECH_MS = 500       // 太短的忽略
+
+    node.onaudioprocess = event => {
+      if (!recording) return
+      const input = event.inputBuffer.getChannelData(0)
+      const copy = new Float32Array(input)
+      if (!alwaysMode) { chunks.push(copy); return }
+
+      // 常聆听：按块检测，静音够久就把这一段当成一句话送出去
+      let sum = 0
+      for (let i = 0; i < copy.length; i++) sum += copy[i] * copy[i]
+      const rms = Math.sqrt(sum / copy.length)
+      const now = performance.now()
+      if (rms > VAD_THRESHOLD) {
+        if (!speechStartedAt) speechStartedAt = now
+        silenceSince = 0
+        utterance.push(copy)
+      } else if (speechStartedAt) {
+        utterance.push(copy)
+        if (!silenceSince) silenceSince = now
+        const spokeMs = now - speechStartedAt
+        const silentMs = now - silenceSince
+        if (silentMs > SILENCE_MS) {
+          if (spokeMs > MIN_SPEECH_MS) flush(sampleRate)
+          utterance = []
+          speechStartedAt = 0
+          silenceSince = 0
+        }
+      }
+    }
+    source.connect(node)
+    node.connect(ctx.destination)
+    recording = true
+    setStatus('录音中…（再按一次结束）')
+  }
+
+  function setAlways(next) {
+    alwaysMode = next === true
+    if (alwaysMode) {
+      if (!recording) begin()
+      setStatus('常聆听已开启')
+    } else {
+      setStatus(recording ? '录音中…' : '常聆听已关闭')
+      if (!recording) return
+    }
+  }
+
+  function downsample(buffer, fromRate, toRate) {
+    if (fromRate === toRate) return buffer
+    const ratio = fromRate / toRate
+    const length = Math.floor(buffer.length / ratio)
+    const result = new Float32Array(length)
+    for (let i = 0; i < length; i++) {
+      const start = Math.floor(i * ratio)
+      const end = Math.min(buffer.length, Math.floor((i + 1) * ratio))
+      let sum = 0
+      for (let j = start; j < end; j++) sum += buffer[j]
+      result[i] = sum / Math.max(1, end - start)
+    }
+    return result
+  }
+
+  function flush(rate) {
+    const total = utterance.reduce((sum, part) => sum + part.length, 0)
+    if (total === 0) return
+    const merged = new Float32Array(total)
+    let offset = 0
+    for (const part of utterance) { merged.set(part, offset); offset += part.length }
+    const converted = downsample(merged, rate || sampleRate, 16000)
+    const pcm = new Int16Array(converted.length)
+    for (let i = 0; i < converted.length; i++) {
+      const sample = Math.max(-1, Math.min(1, converted[i]))
+      pcm[i] = sample < 0 ? sample * 0x8000 : sample * 0x7fff
+    }
+    window.voiceBridge && window.voiceBridge.pcm(pcm.buffer, 16000, total / (rate || sampleRate))
+    setStatus('常聆听：已发送一段')
+  }
+
+  function stop() {
+    if (!recording) return
+    recording = false
+    setStatus('处理中…')
+    try { node.disconnect() } catch {}
+    try { stream.getTracks().forEach(track => track.stop()) } catch {}
+    try { ctx.close() } catch {}
+
+    const total = chunks.reduce((sum, part) => sum + part.length, 0)
+    if (total === 0) { setStatus('没有录到声音'); return }
+    const merged = new Float32Array(total)
+    let offset = 0
+    for (const part of chunks) { merged.set(part, offset); offset += part.length }
+
+    const converted = downsample(merged, sampleRate, 16000)
+    const pcm = new Int16Array(converted.length)
+    for (let i = 0; i < converted.length; i++) {
+      const sample = Math.max(-1, Math.min(1, converted[i]))
+      pcm[i] = sample < 0 ? sample * 0x8000 : sample * 0x7fff
+    }
+    window.voiceBridge && window.voiceBridge.pcm(pcm.buffer, 16000, total / sampleRate)
+    setStatus('已发送 ' + (total / sampleRate).toFixed(1) + ' 秒')
+  }
+
+  if (window.voiceBridge && typeof window.voiceBridge.onRecord === 'function') {
+    window.voiceBridge.onRecord(() => { if (recording) stop(); else begin() })
+  }
+  if (window.voiceBridge && typeof window.voiceBridge.onAlways === 'function') {
+    window.voiceBridge.onAlways(next => setAlways(next))
+  }
+
+  window.voiceBridge && window.voiceBridge.ready()
+  setStatus('麦克风就绪')
+</script>
+</body>
+</html>

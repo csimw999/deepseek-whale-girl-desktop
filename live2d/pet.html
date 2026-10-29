@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>DS 鲸鱼娘</title>
+<style>
+  html, body { margin: 0; padding: 0; background: transparent; overflow: hidden; height: 100%; }
+</style>
+  <style>
+    /* MAIL_V3: 信封贴着她身体的左下角（保持方形构图），徽标改到右上角 */
+    .dshp-mail {
+      left: auto !important;
+      right: 7% !important;
+      bottom: 20px !important;
+      top: auto !important;
+      transform: none !important;
+      width: 30px !important;
+      height: 25px !important;
+      opacity: .92;
+      z-index: 60 !important;
+    }
+    .dshp-mail:hover { transform: translateY(-2px) !important; opacity: 1; }
+
+    /* 徽标：更小、居中、跟着信封一起"跳" */
+    .dshp-mail-badge {
+      min-width: 14px !important;
+      height: 13px !important;
+      line-height: 13px !important;
+      font-size: 8.5px !important;
+      padding: 0 3px !important;
+    }
+    /* 整个信封（连同红点）一起跳：动容器，不动 SVG */
+    @keyframes dshp-mail-bob {
+      0%, 100% { margin-top: 0; }
+      50% { margin-top: -5px; }
+    }
+    .dshp-mail.dshp-mail-new { animation: dshp-mail-bob 1.9s ease-in-out infinite !important; }
+    .dshp-mail.dshp-mail-new svg { animation: none !important; }
+    .dshp-mail.dshp-mail-new .dshp-mail-badge { animation: none !important; }
+    .dshp-mail svg { width: 28px; height: 23px; }
+
+    /* 未读徽标：右上角、向外偏移、深色描边与图标分离（iOS/Android/Windows 通用做法） */
+    .dshp-mail-badge {
+      top: 50% !important;
+      left: 50% !important;
+      right: auto !important;
+      transform: translate(-50%, -50%) !important;
+      bottom: auto !important;
+      left: auto !important;
+      min-width: 16px !important;
+      height: 16px !important;
+      line-height: 16px !important;
+      padding: 0 4px !important;
+      border: 1.5px solid #0b1020 !important;
+      box-shadow: 0 1px 5px rgba(0, 0, 0, .5);
+      font-variant-numeric: tabular-nums;
+    }
+  </style></head>
+<body>
+<!--
+  壳：只做四件事 —— 加载 vendor 运行时、给出 __DSH_PET_BOOT__、加载 pet.js、驱动点击穿透。
+
+  pet.js 原样来自 github.com/Andersen216/dsh-whale-girl-live2d（MIT），
+  只加了一行 window.__DSHPetHit 导出（见 pet.js 里的 [桌面版补丁]）。
+  模型美术 CC BY-NC-SA 4.0（署名：上善无影 / ZipZipPipe / 水六面）。
+-->
+<script src="./vendor/pixi.min.js"></script>
+<script src="./vendor/live2dcubismcore.min.js"></script>
+<script src="./vendor/cubism4.min.js"></script>
+<script>
+  window.__DSH_PET_BOOT__ = {
+    desktop: true,
+    port: String(location.port || ''),
+    config: {
+      height: 210,
+      corner: 'br',
+      lookAtCursor: true,
+      talkMouth: true,
+      maxWidthRatio: 0.6,
+    },
+  }
+  window.__DSHPET_SHELL__ = false
+
+  // BADGE_JS_FIX: pet.js 的徽标定位更具体，用内联 !important 强制到图标右上角
+  setInterval(() => {
+    const mail = document.querySelector('.dshp-mail')
+    if (!mail) return
+    const badge = mail.querySelector('.dshp-mail-badge')
+    if (!badge) return
+    badge.style.setProperty('transform', 'translate(-50%, -50%)', 'important')
+    badge.style.setProperty('right', 'auto', 'important')
+    badge.style.setProperty('bottom', 'auto', 'important')
+    badge.style.setProperty('left', 'calc(50% + 1px)', 'important')
+    badge.style.setProperty('min-width', '0', 'important')
+    badge.style.setProperty('width', '18px', 'important')
+    badge.style.setProperty('height', '14px', 'important')
+    badge.style.setProperty('line-height', '14px', 'important')
+    badge.style.setProperty('font-size', '8px', 'important')
+    badge.style.setProperty('padding', '0', 'important')
+    badge.style.setProperty('letter-spacing', '0', 'important')
+    badge.style.setProperty('border', '1.5px solid #0b1020', 'important')
+  }, 800)
+
+  // 在她原来的工具栏（说话/菜单/隐藏/打开）前面插一个「🐋 聊天」，点了直接开聊天窗
+  function installChatButton() {
+    const dock = document.querySelector('.dshp-dock')
+    if (!dock || dock.querySelector('[data-whale-chat]')) return
+    const btn = document.createElement('button')
+    btn.className = 'dshp-btn dshp-primary'
+    btn.setAttribute('data-whale-chat', '1')
+    btn.textContent = '🐋 聊天'
+    btn.addEventListener('click', event => {
+      event.preventDefault()
+      event.stopImmediatePropagation()
+      if (window.petShell && window.petShell.openChat) window.petShell.openChat()
+    }, true)
+    dock.insertBefore(btn, dock.firstChild)
+    console.log('[shell] chat button inserted, dock children=' + dock.children.length)
+  }
+  setInterval(installChatButton, 1200)
+
+  // 语音：edge-tts 预生成的自然女声（assets\voice\*.mp3），由宿主通过 /dsh-pet/voice/ 提供
+  const VOICE_PACK = {
+    click: ['click1.mp3', 'click2.mp3', 'click3.mp3'],
+    feed: ['feed1.mp3', 'feed2.mp3'],
+    done: ['done1.mp3', 'done2.mp3'],
+    fail: ['fail1.mp3', 'fail2.mp3'],
+    task: ['task1.mp3'],
+  }
+  let lastVoiceAt = 0
+  let currentAudio = null
+  window.__petStopAudio = function () {
+    try { if (currentAudio) { currentAudio.pause(); currentAudio.currentTime = 0; currentAudio = null } } catch (e) { }
+  }
+  window.__petPlayFile = function (url) {
+    try {
+      window.__petStopAudio()
+      currentAudio = new Audio(url)
+      currentAudio.volume = 0.8
+      currentAudio.play().catch(() => {})
+    } catch (e) { }
+  }
+
+  window.__petPlayVoice = function (kind) {
+    const list = VOICE_PACK[kind]
+    if (!list || !list.length) return
+    const now = Date.now()
+    if (now - lastVoiceAt < 900) return // 别让语音叠在一起
+    lastVoiceAt = now
+    const file = list[Math.floor(Math.random() * list.length)]
+    window.__petStopAudio()
+    const audio = new Audio('/dsh-pet/voice/' + file)
+    audio.volume = 0.75
+    currentAudio = audio
+    audio.play().catch(() => {})
+  }
+  window.addEventListener('error', event => console.error('[pet]', event.message))
+</script>
+<script src="./pet.js"></script>
+<script>
+  // ---- 点击穿透驱动 ----------------------------------------------------------
+  // 整屏浮层默认穿透；只有当指针落在鲸鱼娘的 alpha 掩码内（或她的按钮/面板上）时才接管鼠标。
+  // 穿透状态下 Electron 仍会 forward mousemove，所以这里能持续拿到坐标。
+  ;(function () {
+    const shell = window.petShell
+    if (!shell || typeof shell.setInteractive !== 'function') return
+
+    let interactive = false
+    let dragging = false
+
+    function overPet(x, y) {
+      try {
+        if (typeof window.__DSHPetHit === 'function' && window.__DSHPetHit(x, y)) return true
+      } catch (error) { /* 模型还没就绪 */ }
+      const node = document.elementFromPoint(x, y)
+      if (!node) return false
+      return !!node.closest('.dshp-bubble, .dshp-panel, .dshp-dock, .dshp-tab, .dshp-mail, .dshp-report')
+    }
+
+    function setInteractive(next) {
+      if (next === interactive) return
+      interactive = next
+      shell.setInteractive(next)
+    }
+
+    // 本机实测 setIgnoreMouseEvents(…, {forward:true}) 不转发 mousemove，
+    // 所以主进程每 120ms 轮询系统光标推过来（旧版像素桌宠用的也是这条通道）。
+    if (typeof shell.onCursor === 'function') {
+      shell.onCursor(point => {
+        lastCursorAt = Date.now()
+        if (dragging || !point) return
+        const hit = overPet(point.x, point.y)
+        const now = Date.now()
+        if (now - lastDebug > 700) {
+          lastDebug = now
+          console.log('[shell] cursor x=' + Math.round(point.x) + ' y=' + Math.round(point.y) + ' hit=' + hit)
+        }
+        setInteractive(hit)
+      })
+    }
+
+    let lastDebug = 0
+    window.addEventListener('mousemove', event => {
+      if (dragging) return
+      const hit = overPet(event.clientX, event.clientY)
+      const now = Date.now()
+      if (now - lastDebug > 700) {
+        lastDebug = now
+        console.log('[shell] move x=' + Math.round(event.clientX) + ' y=' + Math.round(event.clientY) + ' hit=' + hit + ' isoWidth=' + (window.innerWidth) + 'x' + (window.innerHeight))
+      }
+      setInteractive(hit)
+    }, true)
+
+    window.addEventListener('pointerdown', event => {
+      if (event.button !== 0) return
+      if (!overPet(event.clientX, event.clientY)) return
+      dragging = true
+      setInteractive(true)
+    }, true)
+
+    const release = event => {
+      if (!dragging) return
+      dragging = false
+      const x = event && typeof event.clientX === 'number' ? event.clientX : -1
+      const y = event && typeof event.clientY === 'number' ? event.clientY : -1
+      setInteractive(x >= 0 ? overPet(x, y) : false)
+    }
+    window.addEventListener('pointerup', event => {
+      const hit = event && typeof event.clientX === 'number' ? overPet(event.clientX, event.clientY) : false
+      if (hit) window.__petPlayVoice && window.__petPlayVoice('click')
+      release(event)
+    }, true)
+    window.addEventListener('pointercancel', release, true)
+    window.addEventListener('blur', () => setInteractive(false))
+
+    // 兜底：光标长时间没更新（比如切到别的窗口）才放开穿透，避免挡住桌面
+    let lastCursorAt = Date.now()
+    setInterval(() => {
+      if (dragging || !interactive) return
+      if (Date.now() - lastCursorAt < 2000) return
+      setInteractive(false)
+    }, 1000)
+
+        // 右键归我们的应用菜单（window 捕获阶段先于 pet.js 的 document 监听，直接掐断它）。
+    // 她的「余额面板」改由宿主热键 Ctrl+Alt+B 打开，见 main.js。
+    window.addEventListener('contextmenu', event => {
+      event.preventDefault()
+      event.stopImmediatePropagation()
+      if (typeof shell.menu === 'function') shell.menu()
+    }, true)
+    // 我们的应用菜单改用热键 Ctrl+Shift+A，避免原生菜单压在她的面板上。
+
+    console.log('[shell] click-through driver ready; hitApi=' + (typeof window.__DSHPetHit))
+  })()
+</script>
+</body>
+</html>
