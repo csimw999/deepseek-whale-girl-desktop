@@ -206,7 +206,9 @@
   </div>
   <button class="btn" id="taskBtn">📥 建成 DSH 任务卡</button>
   <button class="btn ghost" id="handoffBtn">📋 复制简报</button>
-  <button class="btn ghost" id="clearBtn">🧹 清空对话</button>
+  <button class="btn ghost" id="exportBtn">📤 导出对话</button>
+    <button class="btn ghost" id="importBtn">📥 导入对话</button>
+    <button class="btn ghost" id="clearBtn">🧹 清空对话</button>
   <div class="note">本地模型驱动，不消耗 token。<br/>用 *星号* 写动作描写；<br/>悬停气泡可「重生成 / 编辑 / 复制」。</div>
 </aside>
 
@@ -216,7 +218,7 @@
     <span class="dot"></span>
     <span class="title">与 <b id="headName">鲸鱼娘</b> 的对话 · 角色扮演</span>
     <span class="spacer"></span>
-    <span class="chip" id="memChip" title="长期记忆条数">记忆 0</span>
+    <span class="chip" id="memChip" style="cursor:pointer" data-tip="点击管理长期记忆" title="长期记忆条数">记忆 0</span>
     <span class="chip" id="modelChip">—</span>
   </header>
   <div id="log"></div>
@@ -228,6 +230,21 @@
     <div class="hint"><span>Enter 发送</span><span>悬停可重生成/编辑</span><span>◀ ▶ 切换候选</span></div>
   </footer>
 </main>
+
+<div class="modal" id="memoryModal">
+  <div class="card">
+    <h3>长期记忆</h3>
+    <p class="sub">她自动记住的关于你的事。记错的可以删掉，也可以手动补一条。</p>
+    <div id="memoryList"></div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <input id="memoryInput" placeholder="手动记一条，例如：他喜欢草莓布丁" style="flex:1;padding:10px 12px;border-radius:10px;border:1px solid #2c3a63;background:#141c31;color:#e8edfa" />
+      <button class="btn" id="memoryAdd">添加</button>
+    </div>
+    <div class="actions">
+      <button class="btn on" id="memoryClose">完成</button>
+    </div>
+  </div>
+</div>
 
 <div class="modal" id="worldModal">
   <div class="card">
@@ -527,6 +544,80 @@
   el('clearBtn').onclick = async () => { await api.clear(); messages = []; renderAll() }
 
   let worldEntries = []
+  // ---- 长期记忆管理 ----
+  function renderMemory(list) {
+    const box = el('memoryList')
+    box.innerHTML = ''
+    if (!list.length) {
+      box.innerHTML = '<div class="note" style="margin-bottom:8px">还没有记忆。多聊几次，她会自己总结；也可以在下面手动加。</div>'
+      return
+    }
+    list.forEach((text, index) => {
+      const row = document.createElement('div')
+      row.style.cssText = 'display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border-radius:10px;background:#141c31;margin-bottom:6px'
+      const span = document.createElement('div')
+      span.style.cssText = 'flex:1;color:#cfe0ff;font-size:13px;line-height:1.5'
+      span.textContent = text
+      const del = document.createElement('button')
+      del.className = 'btn ghost'
+      del.style.cssText = 'padding:2px 8px;font-size:12px'
+      del.textContent = '删'
+      del.onclick = async () => {
+        const result = await api.memoryRemove(index)
+        if (result && result.ok) {
+          renderMemory(result.list || [])
+          el('memChip').textContent = '记忆 ' + (result.list || []).length
+        }
+      }
+      row.append(span, del)
+      box.append(row)
+    })
+  }
+
+  el('memChip').onclick = async () => {
+    el('memoryModal').classList.add('on')
+    const list = await api.memoryList()
+    renderMemory(list || [])
+  }
+  el('memoryClose').onclick = () => el('memoryModal').classList.remove('on')
+  el('memoryAdd').onclick = async () => {
+    const input = el('memoryInput')
+    const text = (input.value || '').trim()
+    if (!text) return
+    const result = await api.memoryAdd(text)
+    if (result && result.ok) {
+      input.value = ''
+      renderMemory(result.list || [])
+      el('memChip').textContent = '记忆 ' + (result.list || []).length
+    }
+  }
+
+  // ---- 导出 / 导入对话 ----
+  el('exportBtn').onclick = async () => {
+    const result = await api.exportChat()
+    if (result && result.ok) {
+      el('noticeBar').textContent = '已导出：' + result.file
+      el('noticeBar').classList.add('on')
+      setTimeout(() => el('noticeBar').classList.remove('on'), 3200)
+    } else if (result && result.reason === 'empty') {
+      el('noticeBar').textContent = '还没有对话可以导出'
+      el('noticeBar').classList.add('on')
+      setTimeout(() => el('noticeBar').classList.remove('on'), 2200)
+    }
+  }
+  el('importBtn').onclick = async () => {
+    const result = await api.importChat()
+    if (result && result.ok) {
+      el('noticeBar').textContent = '已导入 ' + result.count + ' 条，正在刷新…'
+      el('noticeBar').classList.add('on')
+      setTimeout(() => location.reload(), 900)
+    } else if (result && result.reason === 'bad-format') {
+      el('noticeBar').textContent = '这个 JSON 里没有可用的 messages'
+      el('noticeBar').classList.add('on')
+      setTimeout(() => el('noticeBar').classList.remove('on'), 2600)
+    }
+  }
+
   el('worldBtn').onclick = async () => {
     worldEntries = (await api.worldbook()) || []
     paintWorld(); el('worldModal').classList.add('open')

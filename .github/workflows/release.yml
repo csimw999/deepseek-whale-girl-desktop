@@ -1,0 +1,55 @@
+name: Release
+
+# 打 v* 标签时自动打包并上传程序本体。
+# 模型包（1.07 GB）含 ollama blobs 与 SenseVoice，CI 上没有这些文件，
+# 需要本地跑 `node tools/pack-models.cjs` 后手动 `gh release upload`。
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: '要构建的标签（例如 v0.3.0）'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: 打包并上传
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 安装依赖（含 Electron 运行时）
+        run: npm install --no-audit --no-fund
+
+      - name: 版本号自检
+        shell: bash
+        run: |
+          set -e
+          v=$(node -p "require('./package.json').version")
+          ref="${GITHUB_REF_NAME:-${{ github.event.inputs.tag }}}"
+          echo "package.json=$v ref=$ref"
+          if [ -n "$ref" ] && [ "${ref#v}" != "$v" ]; then
+            echo "::error::标签 $ref 与 package.json 版本 $v 不一致"
+            exit 1
+          fi
+
+      - name: 打包绿色版
+        run: node tools/pack-portable.cjs
+
+      - name: 上传到 Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          fail_on_unmatched_files: true
+          files: |
+            dist/whale-girl-*-win32-x64.zip

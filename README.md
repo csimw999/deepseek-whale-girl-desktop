@@ -1,6 +1,6 @@
 # 鲸鱼娘桌面版 · Whale Girl Desktop
 
-![version](https://img.shields.io/badge/version-0.2.3-4c8bf5)
+![version](https://img.shields.io/badge/version-0.3.0-4c8bf5)
 ![platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0a7ea4)
 ![license](https://img.shields.io/badge/license-MIT%20%2B%20CC%20BY--NC--SA-orange)
 ![harness](https://img.shields.io/badge/DSH-DeepSeek%20Harness-536dfe)
@@ -24,6 +24,7 @@
 | DSH 联动 | 监听 DSH 会话事件：思考 / 工具 / 审查时换表情并冒泡 |
 | 本地语音 | SenseVoice 语音识别 + edge-tts 合成，支持按住说话与常听模式 |
 | 角色扮演聊天 | 独立聊天窗，带历史、记忆、世界书、作者注、重答 / 编辑 / 多方案 |
+| 记忆与导出 | 长期记忆可查看 / 删除 / 手动补；对话可导出 Markdown 或 JSON，也能导入回来 |
 | 任务投递 | 把聊天内容写成 DSH 任务卡（写 `ledger-v2.json`，无需鉴权） |
 | 小工具 | 余额面板、番茄钟、成就、亲密度 / 投喂 |
 
@@ -37,7 +38,7 @@
 
 | 文件 | 用途 | 体积 |
 | --- | --- | --- |
-| `whale-girl-0.2.3-win32-x64.zip` | **程序本体**（内置 Electron，不用装 Node） | ~134 MB |
+| `whale-girl-0.3.0-win32-x64.zip` | **程序本体**（内置 Electron，不用装 Node） | ~134 MB |
 | `whale-girl-models-1.5b.zip` | **模型一键包**（聊天 + 语音识别，装完即用） | ~1.07 GB |
 
 解压程序本体，然后双击 `启动鲸鱼娘.bat`，她就出场了。
@@ -125,7 +126,7 @@ npm start
 想让**整个文件夹自带记录**：把压缩包里的 `portable.txt.example` 改名为 `portable.txt`，放在 `鲸鱼娘.exe` 同级。
 
 ```
-whale-girl-0.2.3-win32-x64\
+whale-girl-0.3.0-win32-x64\
   ├ 鲸鱼娘.exe
   ├ portable.txt        ← 建了就启用便携模式
   └ data\               ← 聊天记录 / 记忆 / 头像 / 设置 / 日志全在这里
@@ -182,7 +183,8 @@ ollama 支持断点续传，直接重试即可；也可以在设置里再点一�
 
 | 版本 | 变化 |
 | --- | --- |
-| **v0.2.3** | 程序内下载聊天模型（1.5B / 7B，带进度冒泡），避开 GitHub 2 GiB 附件限制 |
+| **v0.3.0** | 长期记忆可编辑（查看 / 删除 / 手动补）；对话导出 Markdown/JSON 并可导入；GitHub Actions 自动检查与发版 |
+| v0.2.3 | 程序内下载聊天模型（1.5B / 7B，带进度冒泡），避开 GitHub 2 GiB 附件限制 |
 | v0.2.2 | 模型一键包（1.07 GB），解压即装；README 瘦身，开发日志拆到 `docs/DEVLOG.md` |
 | v0.2.1 | 便携模式：`portable.txt` 让数据跟着文件夹走 |
 | v0.2.0 | 绿色版（内置 Electron，不用装 Node）+ 多显示器 + 更新检查 |

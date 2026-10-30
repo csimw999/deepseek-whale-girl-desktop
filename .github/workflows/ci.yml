@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  syntax:
+    name: 语法与配置检查
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 检查主进程与预加载脚本
+        shell: bash
+        run: |
+          set -e
+          for f in main.js preload.js preload-chat.js preload-settings.js preload-voice.js app/host.js app/overlay.js app/loader.js app/pets-defs.js; do
+            if [ -f "$f" ]; then
+              echo "check $f"
+              node --check "$f"
+            fi
+          done
+
+      - name: 检查打包脚本
+        shell: bash
+        run: |
+          set -e
+          for f in tools/pack-portable.cjs tools/pack-models.cjs tools/build-win.cjs; do
+            [ -f "$f" ] && node --check "$f"
+          done
+
+      - name: 校验 JSON
+        shell: bash
+        run: |
+          set -e
+          node -e "JSON.parse(require('fs').readFileSync('package.json','utf8')); console.log('package.json ok')"
+          node -e "JSON.parse(require('fs').readFileSync('live2d/model/c_0120.model3.json','utf8')); console.log('model3.json ok')"
+
+      - name: 确认没有误提交大文件
+        shell: bash
+        run: |
+          set -e
+          big=$(git ls-files -z | xargs -0 -I{} sh -c 'test -f "{}" && s=$(stat -c%s "{}" 2>/dev/null || stat -f%z "{}"); [ "$s" -gt 5242880 ] && echo "{} $s"' 2>/dev/null | head -5)
+          if [ -n "$big" ]; then echo "以下文件超过 5 MB，请确认是否应该进仓库："; echo "$big"; fi
