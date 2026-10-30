@@ -47,5 +47,15 @@ jobs:
         shell: bash
         run: |
           set -e
-          big=$(git ls-files -z | xargs -0 -I{} sh -c 'test -f "{}" && s=$(stat -c%s "{}" 2>/dev/null || stat -f%z "{}"); [ "$s" -gt 5242880 ] && echo "{} $s"' 2>/dev/null | head -5)
-          if [ -n "$big" ]; then echo "以下文件超过 5 MB，请确认是否应该进仓库："; echo "$big"; fi
+          node -e "
+            const { execSync } = require('child_process');
+            const fs = require('fs');
+            const files = execSync('git ls-files', { encoding: 'utf8' }).split('\n').filter(Boolean);
+            const big = files.map(f => [f, fs.statSync(f).size]).filter(([, s]) => s > 5 * 1024 * 1024);
+            if (big.length) {
+              console.log('以下文件超过 5 MB，请确认是否应该进仓库：');
+              for (const [f, s] of big) console.log(' ', f, (s / 1048576).toFixed(1) + ' MB');
+              process.exit(1);
+            }
+            console.log('ok：仓库里没有 >5 MB 的文件');
+          "
