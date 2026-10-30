@@ -21,7 +21,7 @@ jobs:
         shell: bash
         run: |
           set -e
-          for f in main.js preload.js preload-chat.js preload-settings.js preload-voice.js app/host.js app/overlay.js app/loader.js app/pets-defs.js; do
+          for f in main.js preload.js preload-chat.js preload-settings.js preload-voice.js lib/qq-bridge.js app/host.js app/overlay.js app/loader.js app/pets-defs.js; do
             if [ -f "$f" ]; then
               echo "check $f"
               node --check "$f"

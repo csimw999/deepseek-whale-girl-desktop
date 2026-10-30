@@ -32,6 +32,7 @@ const COPY = [
   'voice',
   'assets',
   'pets',
+  'lib',
   'tools/activity-watch.mjs',
 ]
 

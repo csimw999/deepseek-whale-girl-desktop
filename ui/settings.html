@@ -103,7 +103,22 @@
     右键鲸鱼娘：大小 / 形象 / 渲染方式 / 退出
   </div>
 
-  <div class="hint" id="diagBox">
+  <div class="hint" id="qqBox" style="margin-top:14px">
+  <b>QQ 桥</b> <span style="color:#6f7ea6">（NapCat / OneBot，非官方协议，建议用小号）</span>
+  <div class="row"><label>开关</label><button id="qqToggle">检查中…</button><span id="qqStatus" style="color:#7f8db3;font-size:12px"></span></div>
+  <div class="row"><label>监听端口</label><input id="qqPort" style="width:90px;padding:5px 8px;border-radius:7px;border:1px solid #2c3a63;background:#141c31;color:#e8edfa" /></div>
+  <div class="row"><label>NapCat 地址</label><input id="qqApi" style="flex:1;padding:5px 8px;border-radius:7px;border:1px solid #2c3a63;background:#141c31;color:#e8edfa" /></div>
+  <div class="row"><label>Token</label><input id="qqToken" style="flex:1;padding:5px 8px;border-radius:7px;border:1px solid #2c3a63;background:#141c31;color:#e8edfa" placeholder="可留空" /></div>
+  <div class="row"><label>白名单 QQ</label><input id="qqUsers" style="flex:1;padding:5px 8px;border-radius:7px;border:1px solid #2c3a63;background:#141c31;color:#e8edfa" placeholder="例如 123456789,987654321" /></div>
+  <div class="row"><label>白名单群</label><input id="qqGroups" style="flex:1;padding:5px 8px;border-radius:7px;border:1px solid #2c3a63;background:#141c31;color:#e8edfa" placeholder="群里 @她 才回" /></div>
+  <div class="row" style="flex-wrap:wrap">
+    <button id="qqSave">保存并生效</button>
+    <button id="qqTest">发一条测试消息</button>
+    <span style="color:#6f7ea6;font-size:11.5px">只回白名单，其他一律不理</span>
+  </div>
+</div>
+
+<div class="hint" id="diagBox">
   <b>诊断</b>
   <div id="diagText" style="margin-top:6px;color:#9fb0d8;white-space:pre-line">读取中…</div>
   <div class="row" style="margin-top:8px;flex-wrap:wrap">
@@ -213,6 +228,46 @@ document.getElementById('diagOpenData').onclick = () => api.openPath('data')
 document.getElementById('diagOpenLog').onclick = () => api.openPath('log')
 document.getElementById('welcomeBtn').onclick = () => api.openWelcome()
 refreshDiag()
+// ---- QQ 桥 ----
+const qqEl = id => document.getElementById(id)
+async function refreshQq() {
+  const state = await api.qqState()
+  const cfg = state.config || {}
+  qqEl('qqPort').value = cfg.port || 3002
+  qqEl('qqApi').value = cfg.apiBase || 'http://127.0.0.1:3000'
+  qqEl('qqToken').value = cfg.token || ''
+  qqEl('qqUsers').value = cfg.users || ''
+  qqEl('qqGroups').value = cfg.groups || ''
+  const toggle = qqEl('qqToggle')
+  toggle.textContent = cfg.enabled ? '已开启' : '未开启'
+  toggle.className = cfg.enabled ? 'on' : ''
+  const st = state.status || {}
+  qqEl('qqStatus').textContent = st.listening
+    ? '监听中 · 已处理 ' + (st.handled || 0) + ' 条' + (st.lastError ? ' · ' + st.lastError : '')
+    : (st.lastError || '未监听')
+}
+qqEl('qqToggle').onclick = async () => {
+  const state = await api.qqState()
+  await api.qqSave({ enabled: !(state.config && state.config.enabled) })
+  refreshQq()
+}
+qqEl('qqSave').onclick = async () => {
+  await api.qqSave({
+    port: Number(qqEl('qqPort').value) || 3002,
+    apiBase: qqEl('qqApi').value.trim(),
+    token: qqEl('qqToken').value.trim(),
+    users: qqEl('qqUsers').value.trim(),
+    groups: qqEl('qqGroups').value.trim(),
+  })
+  refreshQq()
+}
+qqEl('qqTest').onclick = async () => {
+  const first = (qqEl('qqUsers').value.split(/[,，\s]+/).filter(Boolean))[0]
+  if (!first) { qqEl('qqStatus').textContent = '先在白名单里填一个 QQ 号'; return }
+  const result = await api.qqTest(first)
+  qqEl('qqStatus').textContent = result.ok ? '测试消息已发送，看看 QQ 收到没' : ('失败：' + (result.reason || result.status))
+}
+refreshQq()
 api.getState().then(next => { state = next; render() })
   document.getElementById('autoStart').onclick = () => api.setAutoStart(!state.autoStart).then(next => { state = next; render() })
   document.getElementById('usage').onclick = () => api.showUsage()

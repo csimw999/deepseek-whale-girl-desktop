@@ -1,6 +1,6 @@
 # 鲸鱼娘桌面版 · Whale Girl Desktop
 
-![version](https://img.shields.io/badge/version-0.3.1-4c8bf5)
+![version](https://img.shields.io/badge/version-0.4.0-4c8bf5)
 ![platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0a7ea4)
 ![license](https://img.shields.io/badge/license-MIT%20%2B%20CC%20BY--NC--SA-orange)
 ![harness](https://img.shields.io/badge/DSH-DeepSeek%20Harness-536dfe)
@@ -38,7 +38,7 @@
 
 | 文件 | 用途 | 体积 |
 | --- | --- | --- |
-| `whale-girl-0.3.1-win32-x64.zip` | **程序本体**（内置 Electron，不用装 Node） | ~134 MB |
+| `whale-girl-0.4.0-win32-x64.zip` | **程序本体**（内置 Electron，不用装 Node） | ~134 MB |
 | `whale-girl-models-1.5b.zip` | **模型一键包**（聊天 + 语音识别，装完即用） | ~1.07 GB |
 
 解压程序本体，然后双击 `启动鲸鱼娘.bat`，她就出场了。
@@ -119,6 +119,48 @@ npm start
 | `Ctrl+Alt+H` | 显示 / 隐藏 |
 | `Ctrl+Alt+Q` | 退出 |
 
+## QQ 桥（可选，非官方协议）
+
+让她在 **QQ 上**用自己的人设和记忆跟你聊天：不花 token，走本地模型。
+
+> ⚠️ **风险提示**：这条链路用 NapCat（第三方 QQ 协议），**不是腾讯官方接口**，违反《QQ 软件许可及服务协议》。
+> 建议**只用小号**，大号有被强制下线/风控的可能。介意就用下面的「官方 Bot」方案。
+
+### 工作原理
+
+```
+QQ 消息 ──NapCat（OneBot HTTP 上报）──> 桌宠内置桥（默认 127.0.0.1:3102）
+                                            │
+                                     角色卡 + 长期记忆 + 世界书
+                                            │
+                                        ollama 本地模型
+                                            │
+QQ 回复 <──HTTP /send_private_msg──────────┘
+```
+
+### 步骤
+
+1. 安装并登录 [NapCat](https://github.com/NapNeko/NapCatQQ)（扫码登录你的**小号**）
+2. NapCat 里开启 **HTTP 服务端**（默认 `http://127.0.0.1:3000`）
+3. 再开 **HTTP 上报**，地址填 `http://127.0.0.1:3102/`，格式选 `onebot11`
+4. 桌宠里按 `Ctrl+Shift+S` →「QQ 桥」：
+   - 打开开关
+   - 填**白名单 QQ**（你自己的号，多个用逗号隔开）
+   - 想让她在群里回话，再填**白名单群号**（群里必须 @ 她）
+   - 点「保存并生效」，看到「监听中」就好了
+5. 用那个白名单号给她发消息试试；点「发一条测试消息」可以先验证通路
+
+### 安全设计
+
+- **只回白名单**：私聊只回名单里的号，群聊只回名单里的群，且必须 @ 她
+- 其他消息一律忽略（日志里有记录，但不会回）
+- 单条消息超过 300 字忽略；同一 `message_id` 只处理一次（防重发）
+- 服务只监听 `127.0.0.1`，不对外网开放
+
+### 想要官方、合规的方案
+
+用腾讯官方的 [`dsh-qqbot`](https://github.com/tencent-connect/dsh-qqbot)：QQ 开放平台申请机器人，消息进 DSH 会话，由 DSH 的 agent 回复（不是桌宠的本地模型）。
+
 ## 便携模式（U 盘 / 换机带走记录）
 
 默认数据在 `%APPDATA%\WhaleGirlDesktop`，升级时覆盖程序目录不会丢记录。
@@ -126,7 +168,7 @@ npm start
 想让**整个文件夹自带记录**：把压缩包里的 `portable.txt.example` 改名为 `portable.txt`，放在 `鲸鱼娘.exe` 同级。
 
 ```
-whale-girl-0.3.1-win32-x64\
+whale-girl-0.4.0-win32-x64\
   ├ 鲸鱼娘.exe
   ├ portable.txt        ← 建了就启用便携模式
   └ data\               ← 聊天记录 / 记忆 / 头像 / 设置 / 日志全在这里
@@ -183,7 +225,7 @@ ollama 支持断点续传，直接重试即可；也可以在设置里再点一�
 
 | 版本 | 变化 |
 | --- | --- |
-| **v0.3.1** | 长期记忆可编辑（查看 / 删除 / 手动补）；对话导出 Markdown/JSON 并可导入；GitHub Actions 自动检查与发版 |
+| **v0.4.0** | 长期记忆可编辑（查看 / 删除 / 手动补）；对话导出 Markdown/JSON 并可导入；GitHub Actions 自动检查与发版 |
 | v0.2.3 | 程序内下载聊天模型（1.5B / 7B，带进度冒泡），避开 GitHub 2 GiB 附件限制 |
 | v0.2.2 | 模型一键包（1.07 GB），解压即装；README 瘦身，开发日志拆到 `docs/DEVLOG.md` |
 | v0.2.1 | 便携模式：`portable.txt` 让数据跟着文件夹走 |

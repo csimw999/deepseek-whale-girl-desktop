@@ -24,4 +24,7 @@ contextBridge.exposeInMainWorld('settingsApi', {
   copyDiagnostics: () => ipcRenderer.invoke('settings:copy-diagnostics'),
   openPath: which => ipcRenderer.invoke('settings:open-path', which),
   openWelcome: () => ipcRenderer.invoke('settings:open-welcome'),
+  qqState: () => ipcRenderer.invoke('qq:state'),
+  qqSave: patch => ipcRenderer.invoke('qq:save', patch),
+  qqTest: userId => ipcRenderer.invoke('qq:test', userId),
 })
