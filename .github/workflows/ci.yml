@@ -47,15 +47,23 @@ jobs:
         shell: bash
         run: |
           set -e
+          git config core.quotepath false
           node -e "
             const { execSync } = require('child_process');
             const fs = require('fs');
-            const files = execSync('git ls-files', { encoding: 'utf8' }).split('\n').filter(Boolean);
-            const big = files.map(f => [f, fs.statSync(f).size]).filter(([, s]) => s > 5 * 1024 * 1024);
+            const files = execSync('git -c core.quotepath=false ls-files', { encoding: 'utf8' })
+              .split('\n').map(s => s.trim()).filter(Boolean);
+            const big = [];
+            for (const f of files) {
+              try {
+                const size = fs.statSync(f).size;
+                if (size > 5 * 1024 * 1024) big.push([f, size]);
+              } catch {}
+            }
             if (big.length) {
               console.log('以下文件超过 5 MB，请确认是否应该进仓库：');
               for (const [f, s] of big) console.log(' ', f, (s / 1048576).toFixed(1) + ' MB');
               process.exit(1);
             }
-            console.log('ok：仓库里没有 >5 MB 的文件');
+            console.log('ok：' + files.length + ' 个文件，没有 >5 MB 的');
           "
