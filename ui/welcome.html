@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>欢迎使用鲸鱼娘</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 22px 26px;
+      font: 13.5px/1.7 "Microsoft YaHei UI", "Segoe UI", sans-serif;
+      background: linear-gradient(160deg, #101728 0%, #1a2440 100%);
+      color: #e6ebf8; -webkit-user-select: none; user-select: none;
+    }
+    h1 { margin: 0 0 2px; font-size: 17px; color: #bcd0ff; }
+    .sub { margin: 0 0 18px; font-size: 12px; color: #7f8db3; }
+    .step {
+      border: 1px solid rgba(126,152,255,.18); border-radius: 12px;
+      padding: 14px 16px; margin-bottom: 12px; background: rgba(20,28,49,.6);
+    }
+    .step h2 { margin: 0 0 6px; font-size: 13.5px; color: #cfe0ff; }
+    .step p { margin: 0 0 8px; font-size: 12.5px; color: #9fb0d8; }
+    .step.done { border-color: rgba(74,104,245,.55); background: rgba(30,44,80,.55); }
+    .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    input {
+      flex: 1; min-width: 120px; padding: 7px 10px; border-radius: 8px;
+      border: 1px solid #2c3a63; background: #131b30; color: #e8edfa; font: inherit;
+    }
+    button {
+      border: 1px solid rgba(126,152,255,.35); background: #1c2848; color: #dbe4ff;
+      border-radius: 8px; padding: 6px 12px; cursor: pointer; font: inherit;
+    }
+    button:hover { background: #24325a; }
+    button.primary { background: #4a68f5; border-color: #4a68f5; color: #fff; }
+    button.primary:hover { background: #5a78ff; }
+    .foot { display: flex; gap: 10px; margin-top: 18px; }
+    .grow { flex: 1; }
+    .tag { font-size: 11.5px; color: #6f7ea6; }
+  </style>
+</head>
+<body>
+  <h1>你好，我是鲸鱼娘 🐋</h1>
+  <p class="sub">三步把我安顿好，之后点「完成」就行（随时可以在设置里重新打开）。</p>
+
+  <div class="step" id="step1">
+    <h2>① 你想怎么称呼我？</h2>
+    <p>默认「鲸鱼娘」，也可以改成你喜欢的名字。</p>
+    <div class="row">
+      <input id="nameInput" placeholder="鲸鱼娘" maxlength="16" />
+      <button id="nameSave">就用这个</button>
+    </div>
+  </div>
+
+  <div class="step" id="step2">
+    <h2>② 聊天用的本地模型</h2>
+    <p id="modelState">检查中…</p>
+    <div class="row">
+      <button class="primary" id="dl15">下载 1.5B（1 GB）</button>
+      <button id="dl7b">下载 7B（4.7 GB）</button>
+      <button id="recheck">重新检查</button>
+    </div>
+    <p class="tag" style="margin-top:8px">需要先装 ollama（本地模型运行器）。没装的话：winget install --id Ollama.Ollama</p>
+  </div>
+
+  <div class="step" id="step3">
+    <h2>③ 语音（可选）</h2>
+    <p id="voiceState">检查中…</p>
+    <p class="tag">语音识别需要 SenseVoice 模型（模型包里有）。语音合成走 edge-tts，联网即可。</p>
+  </div>
+
+  <div class="foot">
+    <span class="grow"></span>
+    <button id="skip">先跳过</button>
+    <button class="primary" id="finish">完成，让她出场</button>
+  </div>
+
+  <script>
+    const api = window.settingsApi
+
+    function setStepDone(id, done) {
+      document.getElementById(id).classList.toggle('done', !!done)
+    }
+
+    async function refresh() {
+      const state = await api.welcomeState()
+      document.getElementById('nameInput').placeholder = state.name || '鲸鱼娘'
+      if (state.name) document.getElementById('nameInput').value = state.name
+
+      const m = state.models || []
+      const hasChat = m.some(n => n.startsWith('qwen2.5'))
+      const modelText = !state.ollamaReachable
+        ? '⚠️ 没有连上 ollama（没装或没启动）。装好后点「重新检查」。'
+        : hasChat
+          ? '✅ 已就绪：' + m.filter(n => n.startsWith('qwen2.5')).join('、')
+          : '还没有聊天模型。点下面的按钮下载（走 ollama 官方源）。'
+      document.getElementById('modelState').textContent = modelText
+      setStepDone('step2', hasChat)
+
+      document.getElementById('voiceState').textContent = state.asrReady
+        ? '✅ 语音识别模型已就绪'
+        : '⚠️ 还没装语音识别模型（不装也能玩，只是不能语音输入）'
+      setStepDone('step3', !!state.asrReady)
+      setStepDone('step1', !!(state.name && state.name !== '鲸鱼娘'))
+    }
+
+    document.getElementById('nameSave').onclick = async () => {
+      const name = (document.getElementById('nameInput').value || '').trim() || '鲸鱼娘'
+      await api.rename(name)
+      await refresh()
+    }
+    document.getElementById('dl15').onclick = async () => {
+      document.getElementById('modelState').textContent = '正在下载 1.5B…（她会冒泡报进度，这个窗口可以等）'
+      await api.downloadModel('qwen2.5:1.5b')
+      await refresh()
+    }
+    document.getElementById('dl7b').onclick = async () => {
+      document.getElementById('modelState').textContent = '正在下载 7B…（4.7 GB，会久一点）'
+      await api.downloadModel('qwen2.5:7b')
+      await refresh()
+    }
+    document.getElementById('recheck').onclick = refresh
+    document.getElementById('skip').onclick = async () => { await api.finishWelcome(false); }
+    document.getElementById('finish').onclick = async () => { await api.finishWelcome(true); }
+
+    refresh()
+  </script>
+</body>
+</html>

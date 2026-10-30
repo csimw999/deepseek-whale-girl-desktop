@@ -16,4 +16,12 @@ contextBridge.exposeInMainWorld('settingsApi', {
   showUsage: () => ipcRenderer.send('settings:usage'),
   quit: () => ipcRenderer.send('settings:quit'),
   close: () => ipcRenderer.send('settings:close'),
+  welcomeState: () => ipcRenderer.invoke('welcome:state'),
+  rename: name => ipcRenderer.invoke('welcome:rename', name),
+  finishWelcome: withPet => ipcRenderer.invoke('welcome:finish', withPet),
+  downloadModel: name => ipcRenderer.invoke('settings:download-model', name),
+  diagnostics: () => ipcRenderer.invoke('settings:diagnostics'),
+  copyDiagnostics: () => ipcRenderer.invoke('settings:copy-diagnostics'),
+  openPath: which => ipcRenderer.invoke('settings:open-path', which),
+  openWelcome: () => ipcRenderer.invoke('settings:open-welcome'),
 })

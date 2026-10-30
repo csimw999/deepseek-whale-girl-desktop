@@ -65,10 +65,15 @@
   </div>
 
   <div class="row">
+    <label>聊天模型</label>
+    <button id="modelBtn">下载聊天模型…</button>
+    <span style="color:#7f8db3;font-size:12px">1.5B 快 / 7B 更像人</span>
+  </div>
+
+  <div class="row">
     <label>番茄钟</label>
     <button id="pomodoroBtn">—</button>
-    <button id="modelBtn">下载聊天模型…</button>
-    <span style="color:#7f8db3;font-size:12px">25 分钟专注 / 5 分钟休息</span>
+      <span style="color:#7f8db3;font-size:12px">25 分钟专注 / 5 分钟休息</span>
   </div>
 
   <div class="row">
@@ -98,7 +103,19 @@
     右键鲸鱼娘：大小 / 形象 / 渲染方式 / 退出
   </div>
 
-  <div class="foot">
+  <div class="hint" id="diagBox">
+  <b>诊断</b>
+  <div id="diagText" style="margin-top:6px;color:#9fb0d8;white-space:pre-line">读取中…</div>
+  <div class="row" style="margin-top:8px;flex-wrap:wrap">
+    <button id="diagRefresh">刷新</button>
+    <button id="diagCopy">复制诊断信息</button>
+    <button id="diagOpenData">打开数据目录</button>
+    <button id="diagOpenLog">打开日志</button>
+    <button id="welcomeBtn">重新查看引导</button>
+  </div>
+</div>
+
+<div class="foot">
     <button class="danger" id="quit">退出鲸鱼娘</button>
     <span class="grow"></span>
     <button id="close">关闭</button>
@@ -139,6 +156,12 @@
     voiceBtn.textContent = state.voice === false ? '已关闭' : '已开启'
     voiceBtn.className = state.voice === false ? '' : 'on'
     voiceBtn.onclick = () => api.setVoice(state.voice === false).then(next => { state = next; render() })
+    const modelBtn = document.getElementById('modelBtn')
+    if (modelBtn) modelBtn.onclick = async () => {
+      const old = modelBtn.textContent
+      modelBtn.textContent = '下载中…'
+      try { await api.downloadModel() } finally { modelBtn.textContent = old }
+    }
     const pomodoroBtn = document.getElementById('pomodoroBtn')
     pomodoroBtn.textContent = state.pomodoro ? '运行中' : '未开启'
     pomodoroBtn.className = state.pomodoro ? 'on' : ''
@@ -168,7 +191,29 @@
     auto.className = state.autoStart ? 'on' : ''
   }
 
-  api.getState().then(next => { state = next; render() })
+  const diagText = document.getElementById('diagText')
+async function refreshDiag() {
+  const d = await api.diagnostics()
+  const lines = [
+    '版本：' + d.version + (d.packaged ? '（打包）' : '（源码）') + (d.portable ? ' · 便携模式' : ''),
+    'Electron / Node：' + d.electron + ' / ' + d.node,
+    '系统：' + d.platform + ' · ' + d.windows,
+    'ollama：' + (d.ollamaReachable ? '已连接（' + (d.models || []).join('、') + '）' : '未连接'),
+    '语音识别：' + (d.asrReady ? '就绪' : '缺模型'),
+    '数据目录：' + d.dataDir,
+  ]
+  diagText.textContent = lines.join(String.fromCharCode(10))
+}
+document.getElementById('diagRefresh').onclick = refreshDiag
+document.getElementById('diagCopy').onclick = async () => {
+  await api.copyDiagnostics()
+  diagText.textContent = '已复制到剪贴板，粘贴给她/我看看就行'
+}
+document.getElementById('diagOpenData').onclick = () => api.openPath('data')
+document.getElementById('diagOpenLog').onclick = () => api.openPath('log')
+document.getElementById('welcomeBtn').onclick = () => api.openWelcome()
+refreshDiag()
+api.getState().then(next => { state = next; render() })
   document.getElementById('autoStart').onclick = () => api.setAutoStart(!state.autoStart).then(next => { state = next; render() })
   document.getElementById('usage').onclick = () => api.showUsage()
   document.getElementById('feed').onclick = () => api.feed().then(next => {
