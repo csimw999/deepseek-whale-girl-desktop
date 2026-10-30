@@ -1,6 +1,6 @@
 # 鲸鱼娘桌面版 · Whale Girl Desktop
 
-![version](https://img.shields.io/badge/version-0.2.2-4c8bf5)
+![version](https://img.shields.io/badge/version-0.2.3-4c8bf5)
 ![platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0a7ea4)
 ![license](https://img.shields.io/badge/license-MIT%20%2B%20CC%20BY--NC--SA-orange)
 ![harness](https://img.shields.io/badge/DSH-DeepSeek%20Harness-536dfe)
@@ -37,7 +37,7 @@
 
 | 文件 | 用途 | 体积 |
 | --- | --- | --- |
-| `whale-girl-0.2.2-win32-x64.zip` | **程序本体**（内置 Electron，不用装 Node） | ~134 MB |
+| `whale-girl-0.2.3-win32-x64.zip` | **程序本体**（内置 Electron，不用装 Node） | ~134 MB |
 | `whale-girl-models-1.5b.zip` | **模型一键包**（聊天 + 语音识别，装完即用） | ~1.2 GB |
 
 解压程序本体，然后双击 `启动鲸鱼娘.bat`，她就出场了。
@@ -63,6 +63,23 @@ ollama pull qwen2.5:7b
 ```
 
 > 7B 有 4.7 GB，超过 GitHub 单个附件 2 GB 限制，所以只能在线拉。1.5B 已经够日常聊天。
+
+### 或者：让她自己下载（最省事）
+
+启动后如果检测到**没有聊天模型**，会自动弹一个框：
+
+| 选项 | 说明 |
+| --- | --- |
+| 下载 1.5B（1 GB，快） | 日常聊够用 |
+| 下载 7B（4.7 GB，更像人） | 说话更像个人 |
+| 稍后再说 | 她照样出场，只是不能聊天 |
+
+下载过程中她会冒泡报进度（每 10% 一次），走的是 **ollama 官方源**，支持断点续传。
+
+以后想换模型：按 `Ctrl+Shift+S` 打开设置 →「下载聊天模型…」。
+
+> **为什么 7B 不打包？** GitHub 规定每个发布附件必须小于 **2 GiB**（[官方文档](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases#storage-and-bandwidth-quotas)），而 7B 模型 4.7 GB 放不下。
+> 这种「大模型不进安装包、首次运行再下载」的做法，LM Studio、ComfyUI、Ollama 自己都是这么干的。
 
 ### 不想下载模型包？也可以手动准备
 
@@ -108,7 +125,7 @@ npm start
 想让**整个文件夹自带记录**：把压缩包里的 `portable.txt.example` 改名为 `portable.txt`，放在 `鲸鱼娘.exe` 同级。
 
 ```
-whale-girl-0.2.2-win32-x64\
+whale-girl-0.2.3-win32-x64\
   ├ 鲸鱼娘.exe
   ├ portable.txt        ← 建了就启用便携模式
   └ data\               ← 聊天记录 / 记忆 / 头像 / 设置 / 日志全在这里

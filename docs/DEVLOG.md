@@ -967,3 +967,20 @@ assets/model/motions/*.motion3.json    ← 16 个动作文件
 | `README.md`（原理、坑、能力矩阵、已知限制） | ✅ 已有并持续更新 |
 | 是否包含 `comfyui/`（12 GB + 模型许可） | ❌ 排除，仅保留 `tools/` 脚本说明 |
 | 是否包含 `data/`（会话、记忆、头像、日志） | ❌ 排除（含隐私） |
+## 大文件怎么发（2026-10-30）
+
+**官方限制**：每个 Release 附件必须 < **2 GiB**；单个 Release 最多 1000 个附件，总大小与流量不限（[docs.github.com](https://docs.github.com/en/repositories/releasing-projects-on-github/about-releases#storage-and-bandwidth-quotas)）。
+
+**所以我们的取舍**：
+
+| 资产 | 做法 | 原因 |
+| --- | --- | --- |
+| 程序本体 134 MB | Release 附件 | 远低于上限 |
+| 模型包（1.5B + SenseVoice）1.07 GB | Release 附件 | 低于 2 GiB |
+| qwen2.5:7b 4.7 GB | **不打包**，程序内下载 | 超限；拆包要用户手动合并，体验差 |
+
+同样的选择也是行业惯例：LM Studio / ComfyUI / Ollama 都是「安装包小、模型首次运行再拉」。
+
+**真要拆包的话**（备选方案）：用 7z 分卷或 `tools/split-asset.ps1` 切成 <1.9 GB 的 part 文件，用户需要 `copy /b part* out.zip` 合并——多一步，不推荐。
+
+**附件上传的坑**：1 GB 附件经代理上传容易被掐（HTTP 502）。稳妥做法是「先建空 Release，再用 `gh release upload` 逐个重试」。
